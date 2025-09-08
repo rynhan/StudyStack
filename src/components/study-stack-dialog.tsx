@@ -6,19 +6,19 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-type StudySetData = {
+type StudyStackData = {
   title: string
   description: string
   emoji?: string
 }
 
-interface StudySetDialogProps {
+interface StudyStackDialogProps {
   children?: React.ReactNode
   mode: 'create' | 'edit'
   open: boolean
   onOpenChange: (open: boolean) => void
-  initialData?: StudySetData
-  onSubmit: (data: StudySetData) => void
+  initialData?: StudyStackData
+  onSubmit: (data: StudyStackData) => void
 }
 
 export default function StudyStackDialog({ 
@@ -28,8 +28,8 @@ export default function StudyStackDialog({
   onOpenChange, 
   initialData, 
   onSubmit 
-}: StudySetDialogProps) {
-  const [form, setForm] = useState<StudySetData>({
+}: StudyStackDialogProps) {
+  const [form, setForm] = useState<StudyStackData>({
     title: "",
     description: "",
     emoji: "📚"
@@ -54,10 +54,10 @@ export default function StudyStackDialog({
   }
 
   const isCreate = mode === 'create'
-  const title = isCreate ? 'Create New Study Set' : 'Edit Study Set'
+  const title = isCreate ? 'Create New Study Stack' : 'Edit Study Stack'
   const description = isCreate 
-    ? 'Create a new study set to organize your learning materials.' 
-    : 'Update your study set information.'
+    ? 'Create a new study stack to organize your learning materials.' 
+    : 'Update your study stack information.'
   const submitText = isCreate ? 'Create' : 'Save Changes'
 
   return (
@@ -80,7 +80,7 @@ export default function StudyStackDialog({
             <Input 
               id="title"
               name="title" 
-              placeholder="Enter study set title" 
+              placeholder="Enter study stack title" 
               value={form.title} 
               onChange={handleChange} 
               required 
@@ -92,7 +92,7 @@ export default function StudyStackDialog({
             <textarea 
               id="description"
               name="description" 
-              placeholder="Enter study set description" 
+              placeholder="Enter study stack description" 
               className="w-full border rounded p-2 min-h-[80px] resize-y" 
               value={form.description} 
               onChange={handleChange} 

@@ -5,16 +5,18 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { EllipsisVertical } from 'lucide-react'
+import { EllipsisVertical, Copy } from 'lucide-react'
 import StudyStackDialog from "./study-stack-dialog"
 
-type StudySet = {
+type StudyStack = {
   id: string
   title: string
   description?: string
-  date?: string
+  updatedAt?: string
   resourceCount?: number
   emoji?: string
+  isPublic?: boolean
+  ownerId?: string
 }
 
 export default function StudyStackCard({
@@ -23,12 +25,16 @@ export default function StudyStackCard({
   onClick,
   onEdit,
   onDelete,
+  onCopy,
+  isOwner = false,
 }: {
-  set: StudySet
+  set: StudyStack
   className?: string
   onClick?: () => void
   onEdit?: (id: string, data: { title: string; description: string }) => void
   onDelete?: (id: string) => void
+  onCopy?: (id: string) => void
+  isOwner?: boolean
 }) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -56,43 +62,62 @@ export default function StudyStackCard({
     setIsDeleteDialogOpen(false)
   }
 
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onCopy?.(set.id)
+  }
+
   return (
     <>
       <Card className={`relative h-60 p-6 flex flex-col hover:shadow-lg transition-shadow cursor-pointer group ${className ?? ""}`}>
         {/* Menu Button */}
         <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 w-8 p-0 hover:bg-gray-100 rounded-full"
-                onClick={handleMenuClick}
-              >
-                <EllipsisVertical className="h-4 w-4 text-gray-500" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-32 p-1" align="end">
-              <div className="flex flex-col">
+          {isOwner ? (
+            // Owner can edit/delete
+            <Popover>
+              <PopoverTrigger asChild>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="justify-start h-8 px-2 text-sm"
-                  onClick={handleEdit}
+                  className="h-8 w-8 p-0 hover:bg-gray-100 rounded-full"
+                  onClick={handleMenuClick}
                 >
-                  Edit
+                  <EllipsisVertical className="h-4 w-4 text-gray-500" />
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="justify-start h-8 px-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50"
-                  onClick={handleDelete}
-                >
-                  Delete
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
+              </PopoverTrigger>
+              <PopoverContent className="w-32 p-1" align="end">
+                <div className="flex flex-col">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="justify-start h-8 px-2 text-sm"
+                    onClick={handleEdit}
+                  >
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="justify-start h-8 px-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={handleDelete}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          ) : (
+            // Non-owner can copy
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0 hover:bg-gray-100 rounded-full"
+              onClick={handleCopy}
+              title="Copy to My Stacks"
+            >
+              <Copy className="h-4 w-4 text-gray-500" />
+            </Button>
+          )}
         </div>
 
         {/* Card Content */}
@@ -119,7 +144,7 @@ export default function StudyStackCard({
 
           {/* Footer */}
           <div className="flex justify-between items-center pt-3 border-gray-100">
-            <span className="text-xs text-gray-500">{set.date}</span>
+            <span className="text-xs text-gray-500">{set.updatedAt}</span>
             <span className="text-xs text-gray-500 font-medium">
               {set.resourceCount ?? 0} resources
             </span>
