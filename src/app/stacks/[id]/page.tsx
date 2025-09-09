@@ -7,11 +7,59 @@ import { ArrowLeft, Plus, ExternalLink, FileText, Video, Image as ImageIcon, Edi
 import { useRouter, useParams } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import AddResourceDialog from "@/components/resource-dialog"
-import { studyStackService, resourceService, apiUtils } from "@/lib/api-client"
-import { StudyStack, Resource as ApiResource } from "@/lib/mock-db"
+import { useUser } from '@clerk/nextjs'
 
-type Resource = {
-  id: string
+// Utility functions for resource type detection
+const detectResourceType = (url?: string): 'youtube' | 'webpage' | 'document' | 'image' => {
+  if (!url) return 'webpage'
+  
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    return 'youtube'
+  }
+  
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
+  const docExtensions = ['.pdf', '.doc', '.docx', '.txt', '.md']
+  
+  const lowerUrl = url.toLowerCase()
+  
+  if (imageExtensions.some(ext => lowerUrl.includes(ext))) {
+    return 'image'
+  }
+  
+  if (docExtensions.some(ext => lowerUrl.includes(ext))) {
+    return 'document'
+  }
+  
+  return 'webpage'
+}
+
+const getYouTubeEmbedUrl = (url: string): string | null => {
+  // Convert regular YouTube URLs to embed URLs
+  const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
+  const match = url.match(youtubeRegex)
+  
+  if (match && match[1]) {
+    return `https://www.youtube.com/embed/${match[1]}`
+  }
+  
+  return null
+}
+
+// Types based on the API v1 response and Mongoose schema
+interface Stack {
+  _id: string
+  title: string
+  description: string
+  emoji: string
+  isPublic: boolean
+  ownerId: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface Resource {
+  _id: string
+  studyStackId: string
   title: string
   description?: string
   resourceType: 'youtube' | 'webpage' | 'document' | 'image'
@@ -19,7 +67,8 @@ type Resource = {
   embedUrl?: string
   filePath?: string
   userNotes?: string
-  orderIndex: number
+  createdAt: string
+  updatedAt: string
 }
 
 type ResourceData = {
@@ -49,14 +98,15 @@ const getResourceIcon = (type: Resource['resourceType']) => {
 export default function StackPage() {
   const router = useRouter()
   const params = useParams()
+  const { user } = useUser()
   const [isAddResourceOpen, setIsAddResourceOpen] = useState(false)
   const [isEditResourceOpen, setIsEditResourceOpen] = useState(false)
-  const [editingResource, setEditingResource] = useState<ApiResource | null>(null)
-  const [studyStack, setStudyStack] = useState<StudyStack | null>(null)
-  const [resources, setResources] = useState<ApiResource[]>([])
+  const [editingResource, setEditingResource] = useState<Resource | null>(null)
+  const [studyStack, setStudyStack] = useState<Stack | null>(null)
+  const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
   
-  const currentUserId = "current-user-id" // Would come from Clerk in real app
+  const currentUserId = user?.id // Get from Clerk
   const stackId = Array.isArray(params.id) ? params.id[0] : params.id
 
   useEffect(() => { // Load study stack and resources on mount
@@ -67,11 +117,19 @@ export default function StackPage() {
         setLoading(true)
         
         // Load study stack details
-        const studyStackData = await studyStackService.getStudyStack(stackId)
+        const stackResponse = await fetch(`/api/v1/stacks/${stackId}`)
+        if (!stackResponse.ok) {
+          throw new Error(`HTTP error! status: ${stackResponse.status}`)
+        }
+        const studyStackData: Stack = await stackResponse.json()
         setStudyStack(studyStackData)
         
         // Load resources for this study stack
-        const resourcesData = await resourceService.getResources(stackId)
+        const resourcesResponse = await fetch(`/api/v1/stacks/${stackId}/resources`)
+        if (!resourcesResponse.ok) {
+          throw new Error(`HTTP error! status: ${resourcesResponse.status}`)
+        }
+        const resourcesData: Resource[] = await resourcesResponse.json()
         setResources(resourcesData)
       } catch (error) {
         console.error('Failed to load study stack:', error)
@@ -115,24 +173,34 @@ export default function StackPage() {
       let embedUrl: string | undefined
 
       if (data.resourceUrl) {
-        resourceType = apiUtils.detectResourceType(data.resourceUrl)
+        resourceType = detectResourceType(data.resourceUrl)
         if (resourceType === 'youtube') {
-          embedUrl = apiUtils.getYouTubeEmbedUrl(data.resourceUrl) || undefined
+          embedUrl = getYouTubeEmbedUrl(data.resourceUrl) || undefined
         }
       }
 
-      await resourceService.createResource({
-        studyStackId: stackId,
-        title: data.title,
-        description: data.description,
-        resourceType,
-        resourceUrl: data.resourceUrl || '',
-        embedUrl,
-        userNotes: data.userNotes,
+      const response = await fetch(`/api/v1/stacks/${stackId}/resources`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: data.title,
+          description: data.description,
+          resourceType,
+          resourceUrl: data.resourceUrl || '',
+          embedUrl,
+          userNotes: data.userNotes,
+        }),
       })
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
       // Refresh resources
-      const resourcesData = await resourceService.getResources(stackId)
+      const resourcesResponse = await fetch(`/api/v1/stacks/${stackId}/resources`)
+      const resourcesData: Resource[] = await resourcesResponse.json()
       setResources(resourcesData)
       
       setIsAddResourceOpen(false)
@@ -142,7 +210,7 @@ export default function StackPage() {
   }
 
   const handleEditResource = async (data: ResourceData) => {
-    if (!editingResource) return
+    if (!editingResource || !stackId) return
     
     try {
       // Auto-detect resource type and generate embed URL for YouTube
@@ -150,26 +218,35 @@ export default function StackPage() {
       let embedUrl: string | undefined
 
       if (data.resourceUrl) {
-        resourceType = apiUtils.detectResourceType(data.resourceUrl)
+        resourceType = detectResourceType(data.resourceUrl)
         if (resourceType === 'youtube') {
-          embedUrl = apiUtils.getYouTubeEmbedUrl(data.resourceUrl) || undefined
+          embedUrl = getYouTubeEmbedUrl(data.resourceUrl) || undefined
         }
       }
 
-      await resourceService.updateResource(editingResource.id, {
-        title: data.title,
-        description: data.description,
-        resourceType,
-        resourceUrl: data.resourceUrl || '',
-        embedUrl,
-        userNotes: data.userNotes,
+      const response = await fetch(`/api/v1/stacks/${stackId}/resources/${editingResource._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: data.title,
+          description: data.description,
+          resourceType,
+          resourceUrl: data.resourceUrl || '',
+          embedUrl,
+          userNotes: data.userNotes,
+        }),
       })
 
-      // Refresh resources
-      if (stackId) {
-        const resourcesData = await resourceService.getResources(stackId)
-        setResources(resourcesData)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
+
+      // Refresh resources
+      const resourcesResponse = await fetch(`/api/v1/stacks/${stackId}/resources`)
+      const resourcesData: Resource[] = await resourcesResponse.json()
+      setResources(resourcesData)
       
       setIsEditResourceOpen(false)
       setEditingResource(null)
@@ -179,20 +256,27 @@ export default function StackPage() {
   }
 
   const handleDeleteResource = async (resourceId: string) => {
+    if (!stackId) return
+    
     try {
-      await resourceService.deleteResource(resourceId)
+      const response = await fetch(`/api/v1/stacks/${stackId}/resources/${resourceId}`, {
+        method: 'DELETE',
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
       
       // Refresh resources
-      if (stackId) {
-        const resourcesData = await resourceService.getResources(stackId)
-        setResources(resourcesData)
-      }
+      const resourcesResponse = await fetch(`/api/v1/stacks/${stackId}/resources`)
+      const resourcesData: Resource[] = await resourcesResponse.json()
+      setResources(resourcesData)
     } catch (error) {
       console.error('Failed to delete resource:', error)
     }
   }
 
-  const openEditDialog = (resource: ApiResource) => {
+  const openEditDialog = (resource: Resource) => {
     setEditingResource(resource)
     setIsEditResourceOpen(true)
   }
@@ -276,10 +360,10 @@ export default function StackPage() {
           </Card>
         ) : (
           resources
-            .sort((a, b) => a.orderIndex - b.orderIndex)
+            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
             .map((resource) => (
               <Card 
-                key={resource.id} 
+                key={resource._id} 
                 className="p-6 hover:shadow-md transition-shadow relative group"
               >
                 {/* Action Menu for Owners */}
@@ -316,7 +400,7 @@ export default function StackPage() {
                             onClick={(e) => {
                               e.stopPropagation()
                               if (confirm('Are you sure you want to delete this resource?')) {
-                                handleDeleteResource(resource.id)
+                                handleDeleteResource(resource._id)
                               }
                             }}
                           >

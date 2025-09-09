@@ -5,11 +5,13 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 
 type StudyStackData = {
   title: string
   description: string
   emoji?: string
+  isPublic?: boolean
 }
 
 interface StudyStackDialogProps {
@@ -32,14 +34,15 @@ export default function StudyStackDialog({
   const [form, setForm] = useState<StudyStackData>({
     title: "",
     description: "",
-    emoji: "📚"
+    emoji: "📚",
+    isPublic: false
   })
 
   useEffect(() => {
     if (initialData) {
       setForm(initialData)
     } else {
-      setForm({ title: "", description: "", emoji: "📚" })
+      setForm({ title: "", description: "", emoji: "📚", isPublic: false })
     }
   }, [initialData, open])
 
@@ -111,6 +114,17 @@ export default function StudyStackDialog({
                 onChange={handleChange}
                 maxLength={2}
               />
+            </div>
+          )}
+
+          {isCreate && (
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="isPublic"
+                checked={form.isPublic}
+                onCheckedChange={(checked) => setForm({ ...form, isPublic: checked })}
+              />
+              <Label htmlFor="isPublic">Make this stack public</Label>
             </div>
           )}
           
