@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import ReusableEmojiPicker from "@/components/reusable-emoji-picker"
 
 type StudyStackData = {
   title: string
@@ -77,8 +78,32 @@ export default function StudyStackDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div>
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="emoji">Emoji</Label>
+            <div className="flex items-center gap-3">
+              {/* Circular emoji display */}
+              <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-full text-2xl">
+                {form.emoji}
+              </div>
+              
+              {/* Change emoji button using reusable component */}
+              <ReusableEmojiPicker
+                emoji={form.emoji || "📚"}
+                onEmojiSelect={(emoji) => setForm({ ...form, emoji })}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                >
+                  Change emoji
+                </Button>
+              </ReusableEmojiPicker>
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
             <Input 
               id="title"
@@ -90,43 +115,31 @@ export default function StudyStackDialog({
             />
           </div>
           
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <textarea 
               id="description"
               name="description" 
               placeholder="Enter study stack description" 
-              className="w-full border rounded p-2 min-h-[80px] resize-y" 
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y" 
               value={form.description} 
               onChange={handleChange} 
               rows={3} 
             />
           </div>
 
-          {isCreate && (
-            <div>
-              <Label htmlFor="emoji">Emoji</Label>
-              <Input 
-                id="emoji"
-                name="emoji" 
-                placeholder="📚" 
-                value={form.emoji} 
-                onChange={handleChange}
-                maxLength={2}
-              />
-            </div>
-          )}
-
-          {isCreate && (
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isPublic"
-                checked={form.isPublic}
-                onCheckedChange={(checked) => setForm({ ...form, isPublic: checked })}
-              />
-              <Label htmlFor="isPublic">Make this stack public</Label>
-            </div>
-          )}
+          <div className="flex items-center space-x-3">
+            <Switch
+              id="isPublic"
+              checked={form.isPublic}
+              onCheckedChange={(checked) => setForm({ ...form, isPublic: checked })}
+            />
+            <Label htmlFor="isPublic" className="flex items-center gap-2">
+              <span>
+                This stack is <strong>{form.isPublic ? 'Public 🌐' : 'Private 🔒'}</strong>
+              </span>
+            </Label>
+          </div>
           
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -45,7 +45,7 @@ export default function Home() {
         }
         const allStacks: Stack[] = await response.json()
         
-        // Filter private stacks for current user
+        // Filter all stacks owned by current user (private and public)
         const myStacks = allStacks.filter(stack => stack.ownerId === currentUserId)
         setPrivateStacks(myStacks)
         
@@ -62,7 +62,7 @@ export default function Home() {
     loadData()
   }, [currentUserId])
 
-  const handleEditStack = async (id: string, data: { title: string; description: string }) => {
+  const handleEditStack = async (id: string, data: { title: string; description: string; emoji?: string; isPublic?: boolean }) => {
     try {
       const response = await fetch(`/api/v1/stacks/${id}`, {
         method: 'PUT',
@@ -79,8 +79,14 @@ export default function Home() {
       // Refresh the stacks
       const allStacksResponse = await fetch('/api/v1/stacks')
       const allStacks: Stack[] = await allStacksResponse.json()
-      const myStacks = allStacks.filter(stack => stack.ownerId === currentUserId && !stack.isPublic)
+      
+      // Filter all stacks owned by current user (private and public)
+      const myStacks = allStacks.filter(stack => stack.ownerId === currentUserId)
       setPrivateStacks(myStacks)
+      
+      // Filter public stacks
+      const publicStacksList = allStacks.filter(stack => stack.isPublic)
+      setPublicStacks(publicStacksList)
     } catch (error) {
       console.error('Failed to edit stack:', error)
     }
@@ -99,8 +105,14 @@ export default function Home() {
       // Refresh the stacks
       const allStacksResponse = await fetch('/api/v1/stacks')
       const allStacks: Stack[] = await allStacksResponse.json()
-      const myStacks = allStacks.filter(stack => stack.ownerId === currentUserId && !stack.isPublic)
+      
+      // Filter all stacks owned by current user (private and public)
+      const myStacks = allStacks.filter(stack => stack.ownerId === currentUserId)
       setPrivateStacks(myStacks)
+      
+      // Filter public stacks
+      const publicStacksList = allStacks.filter(stack => stack.isPublic)
+      setPublicStacks(publicStacksList)
     } catch (error) {
       console.error('Failed to delete stack:', error)
     }
@@ -123,8 +135,14 @@ export default function Home() {
       // Refresh the stacks to show the new copy
       const allStacksResponse = await fetch('/api/v1/stacks')
       const allStacks: Stack[] = await allStacksResponse.json()
-      const myStacks = allStacks.filter(stack => stack.ownerId === currentUserId && !stack.isPublic)
+      
+      // Filter all stacks owned by current user (private and public)
+      const myStacks = allStacks.filter(stack => stack.ownerId === currentUserId)
       setPrivateStacks(myStacks)
+      
+      // Filter public stacks
+      const publicStacksList = allStacks.filter(stack => stack.isPublic)
+      setPublicStacks(publicStacksList)
     } catch (error) {
       console.error('Failed to copy stack:', error)
     }

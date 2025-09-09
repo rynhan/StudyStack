@@ -109,6 +109,8 @@ export default function StackPage() {
   const currentUserId = user?.id // Get from Clerk
   const stackId = Array.isArray(params.id) ? params.id[0] : params.id
 
+  const isOwner = studyStack?.ownerId === currentUserId
+
   useEffect(() => { // Load study stack and resources on mount
     const loadData = async () => {
       if (!stackId) return
@@ -151,18 +153,32 @@ export default function StackPage() {
     )
   }
 
-  if (!studyStack) {
+  if (!studyStack || (!studyStack.isPublic && !isOwner)) {
+    return (
+      <main>
+        <div className="text-center">
+          <div className="text-8xl mb-8">🔒</div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
+          <p className="text-xl text-gray-600 mb-8">
+            {!studyStack ? 'Stack not found' : 'This stack is private'}
+          </p>
+          <Button onClick={() => router.push('/')}> 
+            Go Back Home
+          </Button>
+        </div>
+      </main>
+    )
+  }
+  
+  if (loading) {
     return (
       <div className="container mx-auto p-12">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Stack Not Found</h1>
-          <Button onClick={() => router.push('/')}>Go Back Home</Button>
+          <p className="text-gray-500">Loading...</p>
         </div>
       </div>
     )
   }
-
-  const isOwner = studyStack.ownerId === currentUserId
 
   const handleAddResource = async (data: ResourceData) => {
     if (!stackId) return

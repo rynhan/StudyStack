@@ -31,7 +31,7 @@ export default function StudyStackCard({
   set: StudyStack
   className?: string
   onClick?: () => void
-  onEdit?: (id: string, data: { title: string; description: string }) => void
+  onEdit?: (id: string, data: { title: string; description: string; emoji?: string; isPublic?: boolean }) => void
   onDelete?: (id: string) => void
   onCopy?: (id: string) => void
   isOwner?: boolean
@@ -53,7 +53,7 @@ export default function StudyStackCard({
     setIsDeleteDialogOpen(true)
   }
 
-  const handleSaveEdit = (data: { title: string; description: string }) => {
+  const handleSaveEdit = (data: { title: string; description: string; emoji?: string; isPublic?: boolean }) => {
     onEdit?.(set.id, data)
   }
 
@@ -144,9 +144,15 @@ export default function StudyStackCard({
 
           {/* Footer */}
           <div className="flex justify-between items-center pt-3 border-gray-100">
-            <span className="text-xs text-gray-500">{set.updatedAt}</span>
+            <span className="text-xs text-gray-500">
+              {set.updatedAt ? new Date(set.updatedAt).toLocaleDateString('en-GB', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+              }) : ''}
+            </span>
             <span className="text-xs text-gray-500 font-medium">
-              {set.resourceCount ?? 0} resources
+              {set.resourceCount ?? 0} resources {set.isPublic ? ' 🌐' : ' 🔒'}
             </span>
           </div>
         </div>
@@ -160,7 +166,8 @@ export default function StudyStackCard({
         initialData={{ 
           title: set.title, 
           description: set.description || "",
-          emoji: set.emoji 
+          emoji: set.emoji,
+          isPublic: set.isPublic || false
         }}
         onSubmit={handleSaveEdit}
       />

@@ -59,13 +59,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-// DELETE /api/v1/stacks/:stackId → hapus stack
+// DELETE /api/v1/stacks/:stackId → hapus stack dan semua resources terkait
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ stackId: string }> }) {
   await dbConnect();
   try {
     const stackId = (await params).stackId;
-    const deleted = await StackModel.findByIdAndDelete(stackId);
-    if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    
+    // First check if stack exists
+    const stack = await StackModel.findById(stackId);
+    if (!stack) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    
+    // Delete all resources associated with this stack
+    const ResourceModel = (await import("@/models/Resource")).default;
+    await ResourceModel.deleteMany({ studyStackId: stackId });
+    
+    // Then delete the stack
+    await StackModel.findByIdAndDelete(stackId);
+    
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err: unknown) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
