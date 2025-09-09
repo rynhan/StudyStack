@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Plus, FileText, Search, SortAsc, SortDesc } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ArrowLeft, Plus, FileText, Search, BookOpen, Brain, GraduationCap } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
 import AddResourceDialog from "@/components/resource-dialog"
 import ResourceCard from "@/components/resource-card"
+import ResourceCardLearn from "@/components/resource-card-learn"
+import LearningProgress from "@/components/learning-progress"
+import SearchBar from "@/components/search-bar"
 import { useUser } from '@clerk/nextjs'
 
 // Utility functions for resource type detection
@@ -65,6 +67,7 @@ interface Resource {
   title: string
   description?: string
   resourceType: 'youtube' | 'webpage' | 'document' | 'image'
+  status?: 'reference' | 'todo' | 'inprogress' | 'done'
   resourceUrl: string
   embedUrl?: string
   filePath?: string
@@ -80,6 +83,7 @@ type ResourceData = {
   resourceUrl?: string
   file?: File
   userNotes: string
+  status?: 'reference' | 'todo' | 'inprogress' | 'done'
 }
 
 
@@ -95,6 +99,7 @@ export default function StackPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState<'created' | 'updated'>('created')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'reference' | 'todo' | 'inprogress' | 'done'>('all')
   
   const currentUserId = user?.id // Get from Clerk
   const stackId = Array.isArray(params.id) ? params.id[0] : params.id
@@ -133,7 +138,7 @@ export default function StackPage() {
     loadData()
   }, [stackId])
 
-  // Filter and sort resources based on search query and sort preferences
+  // Filter and sort resources based on search query and sort preferences (Resources Tab)
   const filteredAndSortedResources = React.useMemo(() => {
     let filtered = resources
 
@@ -161,6 +166,40 @@ export default function StackPage() {
 
     return sorted
   }, [resources, searchQuery, sortBy, sortOrder])
+
+  // Filter and sort resources for Learn Tab
+  const filteredLearnResources = React.useMemo(() => {
+    let filtered = resources.filter(r => r.status !== 'reference') // Exclude reference resources
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(resource => 
+        resource.title.toLowerCase().includes(query) ||
+        resource.description?.toLowerCase().includes(query) ||
+        resource.userNotes?.toLowerCase().includes(query)
+      )
+    }
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(resource => resource.status === statusFilter)
+    }
+
+    // Sort resources
+    const sorted = [...filtered].sort((a, b) => {
+      const dateA = new Date(sortBy === 'created' ? a.createdAt : a.updatedAt)
+      const dateB = new Date(sortBy === 'created' ? b.createdAt : b.updatedAt)
+      
+      if (sortOrder === 'asc') {
+        return dateA.getTime() - dateB.getTime()
+      } else {
+        return dateB.getTime() - dateA.getTime()
+      }
+    })
+
+    return sorted
+  }, [resources, searchQuery, statusFilter, sortBy, sortOrder])
   
   if (loading) {
     return (
@@ -214,7 +253,7 @@ export default function StackPage() {
         }
       }
 
-      const response = await fetch(`/api/v1/stacks/${stackId}/resources`, {
+  const response = await fetch(`/api/v1/stacks/${stackId}/resources`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -222,10 +261,11 @@ export default function StackPage() {
         body: JSON.stringify({
           title: data.title,
           description: data.description,
-          resourceType,
-          resourceUrl: data.resourceUrl || '',
-          embedUrl,
-          userNotes: data.userNotes,
+      resourceType,
+      resourceUrl: data.resourceUrl || '',
+      embedUrl,
+      userNotes: data.userNotes,
+  status: data.status || 'reference',
         }),
       })
 
@@ -259,7 +299,7 @@ export default function StackPage() {
         }
       }
 
-      const response = await fetch(`/api/v1/stacks/${stackId}/resources/${resourceId}`, {
+    const response = await fetch(`/api/v1/stacks/${stackId}/resources/${resourceId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -269,8 +309,9 @@ export default function StackPage() {
           description: data.description,
           resourceType,
           resourceUrl: data.resourceUrl || '',
-          embedUrl,
-          userNotes: data.userNotes,
+      embedUrl,
+      userNotes: data.userNotes,
+    status: data.status || 'reference',
         }),
       })
 
@@ -308,6 +349,42 @@ export default function StackPage() {
     }
   }
 
+  const handleStatusChange = async (resourceId: string, newStatus: Resource['status']) => {
+    if (!stackId) return
+    
+    try {
+      const resource = resources.find(r => r._id === resourceId)
+      if (!resource) return
+      
+      const response = await fetch(`/api/v1/stacks/${stackId}/resources/${resourceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: resource.title,
+          description: resource.description,
+          resourceType: resource.resourceType,
+          resourceUrl: resource.resourceUrl,
+          embedUrl: resource.embedUrl,
+          userNotes: resource.userNotes,
+          status: newStatus,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      // Refresh resources
+      const resourcesResponse = await fetch(`/api/v1/stacks/${stackId}/resources`)
+      const resourcesData: Resource[] = await resourcesResponse.json()
+      setResources(resourcesData)
+    } catch (error) {
+      console.error('Failed to update resource status:', error)
+    }
+  }
+
 
 
   const handleResourceClick = (resource: Resource) => {
@@ -321,10 +398,11 @@ export default function StackPage() {
     }
   }
 
+
+
   return (
     <main className="container mx-auto p-6 max-w-4xl">
-
-      {/* Header */}
+      {/* Back Button */}
       <div className="flex items-center mb-6">
         <Button 
           variant="ghost" 
@@ -337,8 +415,8 @@ export default function StackPage() {
         </Button>
       </div>
 
-      {/* Stack Info */}
-      <div className="mb-8">
+      {/* Stack Header */}
+      <div className="mb-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
             <span className="text-4xl">{studyStack.emoji}</span>
@@ -357,133 +435,247 @@ export default function StackPage() {
             </Button>
           )}
         </div>
+
       </div>
 
-      {/* Search and Filter Bar */}
-      {resources.length > 0 && (
-        <div className="mb-6 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search Input */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search resources by title, description, or notes..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+      {/* Tabs */}
+      <Tabs defaultValue="resources" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="resources" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Resources
+          </TabsTrigger>
+          <TabsTrigger value="learn" className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            Learn
+          </TabsTrigger>
+          <TabsTrigger value="assessment" className="flex items-center gap-2">
+            <GraduationCap className="h-4 w-4" />
+            Assessment
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Resources Tab */}
+        <TabsContent value="resources" className="mt-6">
+          {/* Search and Filter Bar */}
+          {resources.length > 0 && (
+            <div className="mb-6 space-y-4">
+              <SearchBar
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                sortBy={sortBy}
+                onSortByChange={setSortBy}
+                sortOrder={sortOrder}
+                onSortOrderChange={setSortOrder}
               />
-            </div>
-            
-            {/* Filter Controls */}
-            <div className="flex gap-2">
-              <Select value={sortBy} onValueChange={(value: 'created' | 'updated') => setSortBy(value)}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="created">Created</SelectItem>
-                  <SelectItem value="updated">Modified</SelectItem>
-                </SelectContent>
-              </Select>
               
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="px-3"
-              >
-                {sortOrder === 'asc' ? (
-                  <SortAsc className="h-4 w-4" />
-                ) : (
-                  <SortDesc className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-          
-          {/* Resource count and status */}
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              {searchQuery ? (
-                <>
-                  <span className="font-medium">
-                    {filteredAndSortedResources.length}
-                  </span>
-                  {' '}of{' '}
-                  <span className="font-medium">{resources.length}</span>
-                  {' '}resource{resources.length !== 1 ? 's' : ''} found
-                </>
-              ) : (
-                <>
-                  <span className="font-medium">{resources.length}</span>
-                  {' '}resource{resources.length !== 1 ? 's' : ''}
-                  {!isOwner && (
-                    <span className="text-gray-400 ml-2">• Public Stack</span>
+              {/* Resource count and status */}
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  {searchQuery ? (
+                    <>
+                      <span className="font-medium">
+                        {filteredAndSortedResources.length}
+                      </span>
+                      {' '}of{' '}
+                      <span className="font-medium">{resources.length}</span>
+                      {' '}resource{resources.length !== 1 ? 's' : ''} found
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-medium">{resources.length}</span>
+                      {' '}resource{resources.length !== 1 ? 's' : ''}
+                      {!isOwner && (
+                        <span className="text-gray-400 ml-2">• Public Stack</span>
+                      )}
+                    </>
                   )}
-                </>
-              )}
+                </div>
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearchQuery('')}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    Clear search
+                  </Button>
+                )}
+              </div>
             </div>
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchQuery('')}
-                className="text-xs text-gray-500 hover:text-gray-700"
-              >
-                Clear search
-              </Button>
+          )}
+
+          {/* Resources List */}
+          <div className="space-y-4">
+            {resources.length === 0 ? (
+              <Card className="p-8 text-center">
+                <div className="text-gray-500 mb-4">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No resources yet</h3>
+                  <p className="text-sm">
+                    {isOwner 
+                      ? "Start building your study stack by adding your first resource."
+                      : "This study stack doesn't have any resources yet."
+                    }
+                  </p>
+                </div>
+                {isOwner && (
+                  <Button 
+                    onClick={() => setIsAddResourceOpen(true)}
+                    className="mt-4"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add First Resource
+                  </Button>
+                )}
+              </Card>
+            ) : filteredAndSortedResources.length === 0 ? (
+              <Card className="p-8 text-center">
+                <div className="text-gray-500">
+                  <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No resources found</h3>
+                  <p className="text-sm">
+                    Try adjusting your search query or filter settings.
+                  </p>
+                </div>
+              </Card>
+            ) : (
+              filteredAndSortedResources.map((resource) => (
+                <ResourceCard
+                  key={resource._id}
+                  resource={resource}
+                  isOwner={isOwner}
+                  onClick={handleResourceClick}
+                  onEdit={(resourceId, data) => handleEditResource(resourceId, data)}
+                  onDelete={handleDeleteResource}
+                  onStatusChange={handleStatusChange}
+                />
+              ))
             )}
           </div>
-        </div>
-      )}
+        </TabsContent>
 
-      {/* Resources List */}
-      <div className="space-y-4">
-        {resources.length === 0 ? (
+        {/* Learn Tab */}
+        <TabsContent value="learn" className="mt-6">
+          <div className="space-y-6">
+            {/* Progress Component */}
+            <LearningProgress resources={resources} />
+            
+            {/* Search Bar with Status Filter */}
+            {resources.filter(r => r.status !== 'reference').length > 0 && (
+              <SearchBar
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                sortBy={sortBy}
+                onSortByChange={setSortBy}
+                sortOrder={sortOrder}
+                onSortOrderChange={setSortOrder}
+                showStatusFilter={true}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                placeholder="Search learning resources..."
+              />
+            )}
+            
+            {/* Filtered Results or Status Sections */}
+            {searchQuery.trim() || statusFilter !== 'all' ? (
+              // Show filtered results
+              <div className="space-y-3">
+                <div className="text-sm text-zinc-600 mb-4">
+                  {filteredLearnResources.length} resource{filteredLearnResources.length !== 1 ? 's' : ''} found
+                  {searchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSearchQuery('')}
+                      className="ml-2 text-xs"
+                    >
+                      Clear search
+                    </Button>
+                  )}
+                </div>
+                {filteredLearnResources.length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <div className="text-gray-500">
+                      <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <h3 className="text-lg font-medium mb-2">No resources found</h3>
+                      <p className="text-sm">
+                        Try adjusting your search query or filter settings.
+                      </p>
+                    </div>
+                  </Card>
+                ) : (
+                  filteredLearnResources.map((resource) => (
+                    <ResourceCardLearn
+                      key={resource._id}
+                      resource={resource}
+                      isOwner={isOwner}
+                      onClick={handleResourceClick}
+                      onStatusChange={handleStatusChange}
+                    />
+                  ))
+                )}
+              </div>
+            ) : (
+              // Show status sections
+              <div className="space-y-6">
+                {['todo', 'inprogress', 'done'].map((status) => {
+                  const statusResources = resources.filter(r => r.status === status)
+                  const statusTitle = status === 'todo' ? 'To Do' : status === 'inprogress' ? 'In Progress' : 'Completed'
+                  const statusColor = status === 'todo' ? 'text-purple-500' : status === 'inprogress' ? 'text-sky-500' : 'text-lime-700'
+
+                  if (statusResources.length === 0) return null
+                  
+                  return (
+                    <div key={status}>
+                      <h3 className={`text-lg font-semibold mb-2 ${statusColor}`}>
+                        {statusTitle} ({statusResources.length})
+                      </h3>
+                      <div className="grid gap-3">
+                        {statusResources.map((resource) => (
+                          <ResourceCardLearn
+                            key={resource._id}
+                            resource={resource}
+                            isOwner={isOwner}
+                            onClick={handleResourceClick}
+                            onStatusChange={handleStatusChange}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            
+            {/* Empty state for learn tab */}
+            {resources.filter(r => r.status !== 'reference').length === 0 && (
+              <Card className="p-8 text-center">
+                <div className="text-gray-500 mb-4">
+                  <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No learning resources yet</h3>
+                  <p className="text-sm">
+                    Add some resources and set their status to start tracking your learning progress.
+                  </p>
+                </div>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Assessment Tab */}
+        <TabsContent value="assessment" className="mt-6">
           <Card className="p-8 text-center">
             <div className="text-gray-500 mb-4">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No resources yet</h3>
+              <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">AI Assessment Coming Soon</h3>
               <p className="text-sm">
-                {isOwner 
-                  ? "Start building your study stack by adding your first resource."
-                  : "This study stack doesn't have any resources yet."
-                }
-              </p>
-            </div>
-            {isOwner && (
-              <Button 
-                onClick={() => setIsAddResourceOpen(true)}
-                className="mt-4"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Resource
-              </Button>
-            )}
-          </Card>
-        ) : filteredAndSortedResources.length === 0 ? (
-          <Card className="p-8 text-center">
-            <div className="text-gray-500">
-              <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No resources found</h3>
-              <p className="text-sm">
-                Try adjusting your search query or filter settings.
+                We&apos;re working on AI-powered quizzes and assessments to help you test your knowledge.
               </p>
             </div>
           </Card>
-        ) : (
-          filteredAndSortedResources.map((resource) => (
-            <ResourceCard
-              key={resource._id}
-              resource={resource}
-              isOwner={isOwner}
-              onClick={handleResourceClick}
-              onEdit={(resourceId, data) => handleEditResource(resourceId, data)}
-              onDelete={handleDeleteResource}
-            />
-          ))
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Add Resource Dialog */}
       {isOwner && (

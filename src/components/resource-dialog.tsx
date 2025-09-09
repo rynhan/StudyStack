@@ -15,6 +15,7 @@ type ResourceData = {
   resourceUrl?: string
   file?: File
   userNotes: string
+  status?: 'reference' | 'todo' | 'inprogress' | 'done'
 }
 
 interface AddResourceDialogProps {
@@ -22,7 +23,7 @@ interface AddResourceDialogProps {
   onOpenChange: (open: boolean) => void
   onSubmit: (data: ResourceData) => void
   mode?: 'add' | 'edit'
-  initialData?: Partial<ResourceData>
+  initialData?: Partial<ResourceData & { status?: 'reference' | 'todo' | 'inprogress' | 'done' }>
 }
 
 export default function AddResourceDialog({
@@ -38,19 +39,21 @@ export default function AddResourceDialog({
     resourceType: "webpage",
     resourceUrl: "",
     userNotes: "",
+  status: 'reference',
   })
   const [activeTab, setActiveTab] = useState("url")
 
   // Reset form when dialog opens/closes or when initial data changes
   useEffect(() => {
     if (open) {
-      if (initialData && mode === 'edit') {
-        setForm({
+  if (initialData && mode === 'edit') {
+    setForm({
           title: initialData.title || "",
           description: initialData.description || "",
           resourceType: initialData.resourceType || "webpage",
           resourceUrl: initialData.resourceUrl || "",
           userNotes: initialData.userNotes || "",
+  status: initialData.status || 'reference',
         })
         // Set active tab based on whether it's a URL resource or file
         setActiveTab(initialData.resourceUrl ? "url" : "file")
@@ -59,8 +62,9 @@ export default function AddResourceDialog({
           title: "",
           description: "",
           resourceType: "webpage",
-          resourceUrl: "",
-          userNotes: "",
+    resourceUrl: "",
+    userNotes: "",
+    status: 'reference',
         })
         setActiveTab("url")
       }
@@ -81,12 +85,13 @@ export default function AddResourceDialog({
     onOpenChange(false)
     
     // Reset form
-    setForm({
+        setForm({
       title: "",
       description: "",
       resourceType: "webpage",
       resourceUrl: "",
       userNotes: "",
+      status: 'reference',
     })
     setActiveTab("url")
   }
@@ -225,6 +230,23 @@ export default function AddResourceDialog({
                 onChange={(e) => setForm(prev => ({ ...prev, userNotes: e.target.value }))}
                 rows={2}
               />
+            </div>
+
+            {/* Status */}
+            <div className="space-y-2">
+              <Label htmlFor="status">Progress Status</Label>
+              <select
+                id="status"
+                aria-label="Resource progress status"
+                className="mt-2 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.status}
+                onChange={(e) => setForm(prev => ({ ...prev, status: e.target.value as ResourceData['status'] }))}
+              >
+                <option value="reference">Reference</option>
+                <option value="todo">To Do</option>
+                <option value="inprogress">In Progress</option>
+                <option value="done">Done</option>
+              </select>
             </div>
           </div>
 

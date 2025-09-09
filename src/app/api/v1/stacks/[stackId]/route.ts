@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import dbConnect from "@/lib/mongoose";
 import StackModel from "@/models/Stack";
+import ResourceModel from "@/models/Resource";
 
 // GET /api/v1/stacks/:stackId → ambil 1 stack dengan resource count
 export async function GET(request: NextRequest, { params }: { params: Promise<{ stackId: string }> }) {
@@ -70,7 +71,6 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     if (!stack) return NextResponse.json({ error: "Not found" }, { status: 404 });
     
     // Delete all resources associated with this stack
-    const ResourceModel = (await import("@/models/Resource")).default;
     await ResourceModel.deleteMany({ studyStackId: stackId });
     
     // Then delete the stack

@@ -5,6 +5,9 @@ export interface Resource extends Document {
   title: string;
   description?: string;
   resourceType: "youtube" | "webpage" | "document" | "image";
+  // status to track user's progress on this resource
+  // 'reference' means not intended to be learned (default)
+  status: "reference" | "todo" | "inprogress" | "done";
   resourceUrl: string;
   embedUrl?: string;
   filePath?: string;
@@ -19,6 +22,7 @@ const ResourceSchema = new Schema<Resource>(
     title: { type: String, required: true },
     description: { type: String },
     resourceType: { type: String, enum: ["youtube", "webpage", "document", "image"], required: true },
+  status: { type: String, enum: ["reference", "todo", "inprogress", "done"], default: "reference" },
     resourceUrl: { type: String, required: true },
     embedUrl: { type: String },
     filePath: { type: String },

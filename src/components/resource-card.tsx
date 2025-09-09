@@ -14,6 +14,7 @@ interface Resource {
   title: string
   description?: string
   resourceType: 'youtube' | 'webpage' | 'document' | 'image'
+  status?: 'reference' | 'todo' | 'inprogress' | 'done'
   resourceUrl: string
   embedUrl?: string
   filePath?: string
@@ -29,6 +30,7 @@ type ResourceData = {
   resourceUrl?: string
   file?: File
   userNotes: string
+  status?: 'reference' | 'todo' | 'inprogress' | 'done'
 }
 
 const getResourceIcon = (type: Resource['resourceType']) => {
@@ -52,6 +54,7 @@ interface ResourceCardProps {
   onClick?: (resource: Resource) => void
   onEdit?: (resourceId: string, data: ResourceData) => void
   onDelete?: (resourceId: string) => void
+  onStatusChange?: (resourceId: string, newStatus: Resource['status']) => void
 }
 
 export default function ResourceCard({
@@ -60,6 +63,7 @@ export default function ResourceCard({
   onClick,
   onEdit,
   onDelete,
+  onStatusChange,
 }: ResourceCardProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -160,6 +164,23 @@ export default function ResourceCard({
                 </p>
               </div>
             )}
+            
+            {/* Start Learning Button for reference/unspecified resources */}
+            {isOwner && onStatusChange && (!resource.status || !['todo', 'inprogress', 'done'].includes(resource.status)) && (
+              <div className="mt-4">
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onStatusChange(resource._id, 'todo')
+                  }}
+                >
+                  Start Learning
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </Card>
@@ -176,6 +197,7 @@ export default function ResourceCard({
           resourceType: resource.resourceType,
           resourceUrl: resource.resourceUrl,
           userNotes: resource.userNotes || '',
+          status: resource.status,
         }}
       />
 
