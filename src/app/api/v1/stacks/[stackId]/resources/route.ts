@@ -3,11 +3,10 @@ import dbConnect from "@/lib/mongoose";
 import ResourceModel from "@/models/Resource";
 
 // GET /api/v1/stacks/:stackId/resources → ambil semua resources dari stack tertentu
-export async function GET(_req: NextRequest, { params }: { params: { stackId: string } }
-) {
+export async function GET(_req: NextRequest, context: { params: Promise<{ stackId: string }> }) {
   await dbConnect();
   try {
-    const stackId = (await params).stackId;
+    const { stackId } = await context.params
     const resources = await ResourceModel.find({ studyStackId: stackId });
     return NextResponse.json(resources, { status: 200 });
   } catch (err: unknown) {
@@ -16,11 +15,10 @@ export async function GET(_req: NextRequest, { params }: { params: { stackId: st
 }
 
 // POST /api/v1/stacks/:stackId/resources → buat resource baru di stack tertentu
-export async function POST(req: NextRequest, { params }: { params: { stackId: string } }
-) {
+export async function POST(req: NextRequest, context: { params: Promise<{ stackId: string }> }) {
   await dbConnect();
   try {
-    const stackId = (await params).stackId;
+    const { stackId } = await context.params
     const body = await req.json();
     const resource = await ResourceModel.create({
       ...body,
