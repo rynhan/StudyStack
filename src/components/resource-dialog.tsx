@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Link, Upload } from "lucide-react"
 
 type ResourceData = {
@@ -46,14 +47,14 @@ export default function AddResourceDialog({
   // Reset form when dialog opens/closes or when initial data changes
   useEffect(() => {
     if (open) {
-  if (initialData && mode === 'edit') {
-    setForm({
+      if (initialData && mode === 'edit') {
+        setForm({
           title: initialData.title || "",
           description: initialData.description || "",
           resourceType: initialData.resourceType || "webpage",
           resourceUrl: initialData.resourceUrl || "",
           userNotes: initialData.userNotes || "",
-  status: initialData.status || 'reference',
+          status: initialData.status || 'reference',
         })
         // Set active tab based on whether it's a URL resource or file
         setActiveTab(initialData.resourceUrl ? "url" : "file")
@@ -62,9 +63,9 @@ export default function AddResourceDialog({
           title: "",
           description: "",
           resourceType: "webpage",
-    resourceUrl: "",
-    userNotes: "",
-    status: 'reference',
+          resourceUrl: "",
+          userNotes: "",
+          status: 'reference',
         })
         setActiveTab("url")
       }
@@ -235,18 +236,20 @@ export default function AddResourceDialog({
             {/* Status */}
             <div className="space-y-2">
               <Label htmlFor="status">Progress Status</Label>
-              <select
-                id="status"
-                aria-label="Resource progress status"
-                className="mt-2 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              <Select
                 value={form.status}
-                onChange={(e) => setForm(prev => ({ ...prev, status: e.target.value as ResourceData['status'] }))}
+                onValueChange={(val: string) => setForm(prev => ({ ...prev, status: val as ResourceData['status'] }))}
               >
-                <option value="reference">Reference</option>
-                <option value="todo">To Do</option>
-                <option value="inprogress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
+                <SelectTrigger className="mt-2 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="reference">Reference</SelectItem>
+                  <SelectItem value="todo">To Do</SelectItem>
+                  <SelectItem value="inprogress">In Progress</SelectItem>
+                  <SelectItem value="done">Done</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

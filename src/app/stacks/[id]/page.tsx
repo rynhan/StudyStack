@@ -5,12 +5,14 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Plus, FileText, Search, BookOpen, Brain, GraduationCap } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import axios from 'axios'
 import { useRouter, useParams } from "next/navigation"
 import AddResourceDialog from "@/components/resource-dialog"
 import ResourceCard from "@/components/resource-card"
 import ResourceCardLearn from "@/components/resource-card-learn"
-import LearningProgress from "@/components/learning-progress"
-import SearchBar from "@/components/search-bar"
+import LearningProgress from "@/components/reusable-learning-progress"
+import SearchBar from "@/components/reusable-search-bar"
 import { useUser } from '@clerk/nextjs'
 
 // Utility functions for resource type detection
@@ -106,6 +108,18 @@ export default function StackPage() {
 
   const isOwner = studyStack?.ownerId === currentUserId
 
+  const toggleStackPublic = async (checked: boolean) => {
+    if (!stackId) return
+    try {
+      setStudyStack(prev => prev ? { ...prev, isPublic: checked } : prev)
+      await axios.put(`/api/v1/stacks/${stackId}`, { isPublic: checked })
+    } catch (err) {
+      // Revert on error
+      setStudyStack(prev => prev ? { ...prev, isPublic: !prev.isPublic } : prev)
+      console.error('Failed to update stack visibility', err)
+    }
+  }
+
   useEffect(() => { // Load study stack and resources on mount
     const loadData = async () => {
       if (!stackId) return
@@ -114,19 +128,13 @@ export default function StackPage() {
         setLoading(true)
         
         // Load study stack details
-        const stackResponse = await fetch(`/api/v1/stacks/${stackId}`)
-        if (!stackResponse.ok) {
-          throw new Error(`HTTP error! status: ${stackResponse.status}`)
-        }
-        const studyStackData: Stack = await stackResponse.json()
+        const stackResponse = await axios.get(`/api/v1/stacks/${stackId}`)
+        const studyStackData: Stack = stackResponse.data
         setStudyStack(studyStackData)
         
         // Load resources for this study stack
-        const resourcesResponse = await fetch(`/api/v1/stacks/${stackId}/resources`)
-        if (!resourcesResponse.ok) {
-          throw new Error(`HTTP error! status: ${resourcesResponse.status}`)
-        }
-        const resourcesData: Resource[] = await resourcesResponse.json()
+        const resourcesResponse = await axios.get(`/api/v1/stacks/${stackId}/resources`)
+        const resourcesData: Resource[] = resourcesResponse.data
         setResources(resourcesData)
       } catch (error) {
         console.error('Failed to load study stack:', error)
@@ -156,7 +164,7 @@ export default function StackPage() {
     const sorted = [...filtered].sort((a, b) => {
       const dateA = new Date(sortBy === 'created' ? a.createdAt : a.updatedAt)
       const dateB = new Date(sortBy === 'created' ? b.createdAt : b.updatedAt)
-      
+        
       if (sortOrder === 'asc') {
         return dateA.getTime() - dateB.getTime()
       } else {
@@ -200,7 +208,7 @@ export default function StackPage() {
 
     return sorted
   }, [resources, searchQuery, statusFilter, sortBy, sortOrder])
-  
+
   if (loading) {
     return (
       <div className="container mx-auto p-12">
@@ -227,16 +235,6 @@ export default function StackPage() {
       </main>
     )
   }
-  
-  if (loading) {
-    return (
-      <div className="container mx-auto p-12">
-        <div className="text-center">
-          <p className="text-gray-500">Loading...</p>
-        </div>
-      </div>
-    )
-  }
 
   const handleAddResource = async (data: ResourceData) => {
     if (!stackId) return
@@ -253,29 +251,19 @@ export default function StackPage() {
         }
       }
 
-  const response = await fetch(`/api/v1/stacks/${stackId}/resources`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: data.title,
-          description: data.description,
-      resourceType,
-      resourceUrl: data.resourceUrl || '',
-      embedUrl,
-      userNotes: data.userNotes,
+  await axios.post(`/api/v1/stacks/${stackId}/resources`, {
+      title: data.title,
+      description: data.description,
+    resourceType,
+    resourceUrl: data.resourceUrl || '',
+    embedUrl,
+    userNotes: data.userNotes,
   status: data.status || 'reference',
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+  })
 
       // Refresh resources
-      const resourcesResponse = await fetch(`/api/v1/stacks/${stackId}/resources`)
-      const resourcesData: Resource[] = await resourcesResponse.json()
+      const resourcesResponse = await axios.get(`/api/v1/stacks/${stackId}/resources`)
+      const resourcesData: Resource[] = resourcesResponse.data
       setResources(resourcesData)
       
       setIsAddResourceOpen(false)
@@ -299,29 +287,19 @@ export default function StackPage() {
         }
       }
 
-    const response = await fetch(`/api/v1/stacks/${stackId}/resources/${resourceId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+    await axios.put(`/api/v1/stacks/${stackId}/resources/${resourceId}`, {
           title: data.title,
           description: data.description,
           resourceType,
           resourceUrl: data.resourceUrl || '',
       embedUrl,
       userNotes: data.userNotes,
-    status: data.status || 'reference',
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+      status: data.status || 'reference',
+    })
 
       // Refresh resources
-      const resourcesResponse = await fetch(`/api/v1/stacks/${stackId}/resources`)
-      const resourcesData: Resource[] = await resourcesResponse.json()
+      const resourcesResponse = await axios.get(`/api/v1/stacks/${stackId}/resources`)
+      const resourcesData: Resource[] = resourcesResponse.data
       setResources(resourcesData)
     } catch (error) {
       console.error('Failed to edit resource:', error)
@@ -332,17 +310,11 @@ export default function StackPage() {
     if (!stackId) return
     
     try {
-      const response = await fetch(`/api/v1/stacks/${stackId}/resources/${resourceId}`, {
-        method: 'DELETE',
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
+      await axios.delete(`/api/v1/stacks/${stackId}/resources/${resourceId}`)
+
       // Refresh resources
-      const resourcesResponse = await fetch(`/api/v1/stacks/${stackId}/resources`)
-      const resourcesData: Resource[] = await resourcesResponse.json()
+      const resourcesResponse = await axios.get(`/api/v1/stacks/${stackId}/resources`)
+      const resourcesData: Resource[] = resourcesResponse.data
       setResources(resourcesData)
     } catch (error) {
       console.error('Failed to delete resource:', error)
@@ -356,36 +328,24 @@ export default function StackPage() {
       const resource = resources.find(r => r._id === resourceId)
       if (!resource) return
       
-      const response = await fetch(`/api/v1/stacks/${stackId}/resources/${resourceId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: resource.title,
-          description: resource.description,
-          resourceType: resource.resourceType,
-          resourceUrl: resource.resourceUrl,
-          embedUrl: resource.embedUrl,
-          userNotes: resource.userNotes,
-          status: newStatus,
-        }),
-      })
+    await axios.put(`/api/v1/stacks/${stackId}/resources/${resourceId}`, {
+      title: resource.title,
+      description: resource.description,
+      resourceType: resource.resourceType,
+      resourceUrl: resource.resourceUrl,
+      embedUrl: resource.embedUrl,
+      userNotes: resource.userNotes,
+      status: newStatus,
+    })
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      // Refresh resources
-      const resourcesResponse = await fetch(`/api/v1/stacks/${stackId}/resources`)
-      const resourcesData: Resource[] = await resourcesResponse.json()
+    // Refresh resources
+    const resourcesResponse = await axios.get(`/api/v1/stacks/${stackId}/resources`)
+    const resourcesData: Resource[] = resourcesResponse.data
       setResources(resourcesData)
     } catch (error) {
       console.error('Failed to update resource status:', error)
     }
   }
-
-
 
   const handleResourceClick = (resource: Resource) => {
     if (resource.resourceType === 'youtube') {
@@ -426,13 +386,20 @@ export default function StackPage() {
             </div>
           </div>
           {isOwner && (
-            <Button 
-              onClick={() => setIsAddResourceOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add Resource
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              <Button 
+                onClick={() => setIsAddResourceOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Resource
+              </Button>
+
+              <div className="flex items-center gap-3">
+                <Switch id="isPublic" checked={!!studyStack?.isPublic} onCheckedChange={toggleStackPublic} />
+                <span className="text-sm text-gray-600">{studyStack?.isPublic ? 'Public 🌐' : 'Private 🔒'}</span>
+              </div>
+            </div>
           )}
         </div>
 

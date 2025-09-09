@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import axios from 'axios'
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -30,7 +31,6 @@ export default function Home() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const { user } = useUser() // Get current user from Clerk
   
-  
   const currentUserId = user?.id // In a real app, this would come from Clerk's useUser hook
 
   useEffect(() => { // Load data on component mount
@@ -38,12 +38,9 @@ export default function Home() {
       try {
         setLoading(true)
         
-        // Load all stacks from API v1
-        const response = await fetch('/api/v1/stacks')
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        const allStacks: Stack[] = await response.json()
+  // Load all stacks from API v1
+  const response = await axios.get('/api/v1/stacks')
+  const allStacks: Stack[] = response.data
         
         // Filter all stacks owned by current user (private and public)
         const myStacks = allStacks.filter(stack => stack.ownerId === currentUserId)
@@ -64,21 +61,11 @@ export default function Home() {
 
   const handleEditStack = async (id: string, data: { title: string; description: string; emoji?: string; isPublic?: boolean }) => {
     try {
-      const response = await fetch(`/api/v1/stacks/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      // Refresh the stacks
-      const allStacksResponse = await fetch('/api/v1/stacks')
-      const allStacks: Stack[] = await allStacksResponse.json()
+  await axios.put(`/api/v1/stacks/${id}`, data)
+
+  // Refresh the stacks
+  const allStacksResponse = await axios.get('/api/v1/stacks')
+  const allStacks: Stack[] = allStacksResponse.data
       
       // Filter all stacks owned by current user (private and public)
       const myStacks = allStacks.filter(stack => stack.ownerId === currentUserId)
@@ -94,17 +81,11 @@ export default function Home() {
 
   const handleDeleteStack = async (id: string) => {
     try {
-      const response = await fetch(`/api/v1/stacks/${id}`, {
-        method: 'DELETE',
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      // Refresh the stacks
-      const allStacksResponse = await fetch('/api/v1/stacks')
-      const allStacks: Stack[] = await allStacksResponse.json()
+  await axios.delete(`/api/v1/stacks/${id}`)
+
+  // Refresh the stacks
+  const allStacksResponse = await axios.get('/api/v1/stacks')
+  const allStacks: Stack[] = allStacksResponse.data
       
       // Filter all stacks owned by current user (private and public)
       const myStacks = allStacks.filter(stack => stack.ownerId === currentUserId)
@@ -120,21 +101,11 @@ export default function Home() {
 
   const handleCopyStack = async (id: string) => {
     try {
-      const response = await fetch(`/api/v1/stacks/${id}/copy`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ownerId: currentUserId }),
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      // Refresh the stacks to show the new copy
-      const allStacksResponse = await fetch('/api/v1/stacks')
-      const allStacks: Stack[] = await allStacksResponse.json()
+  await axios.post(`/api/v1/stacks/${id}/copy`, { ownerId: currentUserId })
+
+  // Refresh the stacks to show the new copy
+  const allStacksResponse = await axios.get('/api/v1/stacks')
+  const allStacks: Stack[] = allStacksResponse.data
       
       // Filter all stacks owned by current user (private and public)
       const myStacks = allStacks.filter(stack => stack.ownerId === currentUserId)
@@ -150,23 +121,13 @@ export default function Home() {
 
   const handleCreateStack = async (data: { title: string; description: string; emoji?: string; isPublic?: boolean }) => {
     try {
-      const response = await fetch('/api/v1/stacks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...data,
-          ownerId: currentUserId,
-          isPublic: data.isPublic || false,
-        }),
+      const response = await axios.post('/api/v1/stacks', {
+        ...data,
+        ownerId: currentUserId,
+        isPublic: data.isPublic || false,
       })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const newStack: Stack = await response.json()
+
+      const newStack: Stack = response.data
       router.push(`/stacks/${newStack._id}`)
     } catch (error) {
       console.error('Failed to create stack:', error)

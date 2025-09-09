@@ -3,7 +3,6 @@
 import React from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, FileText, Video, Image as ImageIcon, CheckCircle, Clock, Circle } from "lucide-react"
 
 interface Resource {
   _id: string
