@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Plus, ExternalLink, FileText, Video, Image as ImageIcon, Edit, Trash2, MoreVertical } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ArrowLeft, Plus, FileText, Search, SortAsc, SortDesc } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import AddResourceDialog from "@/components/resource-dialog"
+import ResourceCard from "@/components/resource-card"
 import { useUser } from '@clerk/nextjs'
 
 // Utility functions for resource type detection
@@ -80,31 +82,19 @@ type ResourceData = {
   userNotes: string
 }
 
-const getResourceIcon = (type: Resource['resourceType']) => {
-  switch (type) {
-    case 'youtube':
-      return <Video className="h-5 w-5 text-red-500" />
-    case 'webpage':
-      return <ExternalLink className="h-5 w-5 text-blue-500" />
-    case 'document':
-      return <FileText className="h-5 w-5 text-green-500" />
-    case 'image':
-      return <ImageIcon className="h-5 w-5 text-purple-500" />
-    default:
-      return <FileText className="h-5 w-5 text-gray-500" />
-  }
-}
+
 
 export default function StackPage() {
   const router = useRouter()
   const params = useParams()
   const { user } = useUser()
   const [isAddResourceOpen, setIsAddResourceOpen] = useState(false)
-  const [isEditResourceOpen, setIsEditResourceOpen] = useState(false)
-  const [editingResource, setEditingResource] = useState<Resource | null>(null)
   const [studyStack, setStudyStack] = useState<Stack | null>(null)
   const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [sortBy, setSortBy] = useState<'created' | 'updated'>('created')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   
   const currentUserId = user?.id // Get from Clerk
   const stackId = Array.isArray(params.id) ? params.id[0] : params.id
@@ -142,6 +132,35 @@ export default function StackPage() {
 
     loadData()
   }, [stackId])
+
+  // Filter and sort resources based on search query and sort preferences
+  const filteredAndSortedResources = React.useMemo(() => {
+    let filtered = resources
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = resources.filter(resource => 
+        resource.title.toLowerCase().includes(query) ||
+        resource.description?.toLowerCase().includes(query) ||
+        resource.userNotes?.toLowerCase().includes(query)
+      )
+    }
+
+    // Sort resources
+    const sorted = [...filtered].sort((a, b) => {
+      const dateA = new Date(sortBy === 'created' ? a.createdAt : a.updatedAt)
+      const dateB = new Date(sortBy === 'created' ? b.createdAt : b.updatedAt)
+      
+      if (sortOrder === 'asc') {
+        return dateA.getTime() - dateB.getTime()
+      } else {
+        return dateB.getTime() - dateA.getTime()
+      }
+    })
+
+    return sorted
+  }, [resources, searchQuery, sortBy, sortOrder])
   
   if (loading) {
     return (
@@ -225,8 +244,8 @@ export default function StackPage() {
     }
   }
 
-  const handleEditResource = async (data: ResourceData) => {
-    if (!editingResource || !stackId) return
+  const handleEditResource = async (resourceId: string, data: ResourceData) => {
+    if (!stackId) return
     
     try {
       // Auto-detect resource type and generate embed URL for YouTube
@@ -240,7 +259,7 @@ export default function StackPage() {
         }
       }
 
-      const response = await fetch(`/api/v1/stacks/${stackId}/resources/${editingResource._id}`, {
+      const response = await fetch(`/api/v1/stacks/${stackId}/resources/${resourceId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -263,9 +282,6 @@ export default function StackPage() {
       const resourcesResponse = await fetch(`/api/v1/stacks/${stackId}/resources`)
       const resourcesData: Resource[] = await resourcesResponse.json()
       setResources(resourcesData)
-      
-      setIsEditResourceOpen(false)
-      setEditingResource(null)
     } catch (error) {
       console.error('Failed to edit resource:', error)
     }
@@ -292,10 +308,7 @@ export default function StackPage() {
     }
   }
 
-  const openEditDialog = (resource: Resource) => {
-    setEditingResource(resource)
-    setIsEditResourceOpen(true)
-  }
+
 
   const handleResourceClick = (resource: Resource) => {
     if (resource.resourceType === 'youtube') {
@@ -344,11 +357,85 @@ export default function StackPage() {
             </Button>
           )}
         </div>
-        <div className="text-sm text-gray-500">
-          {resources.length} resource{resources.length !== 1 ? 's' : ''}
-          {!isOwner && ' • Public Stack'}
-        </div>
       </div>
+
+      {/* Search and Filter Bar */}
+      {resources.length > 0 && (
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Search Input */}
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search resources by title, description, or notes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            {/* Filter Controls */}
+            <div className="flex gap-2">
+              <Select value={sortBy} onValueChange={(value: 'created' | 'updated') => setSortBy(value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created">Created</SelectItem>
+                  <SelectItem value="updated">Modified</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="px-3"
+              >
+                {sortOrder === 'asc' ? (
+                  <SortAsc className="h-4 w-4" />
+                ) : (
+                  <SortDesc className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+          
+          {/* Resource count and status */}
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              {searchQuery ? (
+                <>
+                  <span className="font-medium">
+                    {filteredAndSortedResources.length}
+                  </span>
+                  {' '}of{' '}
+                  <span className="font-medium">{resources.length}</span>
+                  {' '}resource{resources.length !== 1 ? 's' : ''} found
+                </>
+              ) : (
+                <>
+                  <span className="font-medium">{resources.length}</span>
+                  {' '}resource{resources.length !== 1 ? 's' : ''}
+                  {!isOwner && (
+                    <span className="text-gray-400 ml-2">• Public Stack</span>
+                  )}
+                </>
+              )}
+            </div>
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchQuery('')}
+                className="text-xs text-gray-500 hover:text-gray-700"
+              >
+                Clear search
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Resources List */}
       <div className="space-y-4">
@@ -374,124 +461,38 @@ export default function StackPage() {
               </Button>
             )}
           </Card>
+        ) : filteredAndSortedResources.length === 0 ? (
+          <Card className="p-8 text-center">
+            <div className="text-gray-500">
+              <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">No resources found</h3>
+              <p className="text-sm">
+                Try adjusting your search query or filter settings.
+              </p>
+            </div>
+          </Card>
         ) : (
-          resources
-            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-            .map((resource) => (
-              <Card 
-                key={resource._id} 
-                className="p-6 hover:shadow-md transition-shadow relative group"
-              >
-                {/* Action Menu for Owners */}
-                {isOwner && (
-                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 hover:bg-gray-100 rounded-full"
-                        >
-                          <MoreVertical className="h-4 w-4 text-gray-500" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-32 p-1" align="end">
-                        <div className="flex flex-col">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="justify-start h-8 px-2 text-sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openEditDialog(resource)
-                            }}
-                          >
-                            <Edit className="h-3 w-3 mr-2" />
-                            Edit
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="justify-start h-8 px-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (confirm('Are you sure you want to delete this resource?')) {
-                                handleDeleteResource(resource._id)
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3 mr-2" />
-                            Delete
-                          </Button>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                )}
-
-                <div 
-                  className="flex items-start gap-4 cursor-pointer"
-                  onClick={() => handleResourceClick(resource)}
-                >
-                  <div className="flex-shrink-0 mt-1">
-                    {getResourceIcon(resource.resourceType)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-lg text-gray-900 leading-tight">
-                        {resource.title}
-                      </h3>
-                    </div>
-                    {resource.description && (
-                      <p className="text-gray-600 mb-3 leading-relaxed">
-                        {resource.description}
-                      </p>
-                    )}
-                    {resource.userNotes && (
-                      <div className="bg-blue-50 border-l-4 border-blue-200 p-3">
-                        <p className="text-sm text-blue-800">
-                          <span className="font-medium">Note:</span> {resource.userNotes}
-                        </p>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      {/* <span className="text-xs text-gray-500 capitalize">
-                        {resource.resourceType}
-                      </span> */}
-                      {/* <ExternalLink className="h-4 w-4 text-gray-400" /> */}
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))
+          filteredAndSortedResources.map((resource) => (
+            <ResourceCard
+              key={resource._id}
+              resource={resource}
+              isOwner={isOwner}
+              onClick={handleResourceClick}
+              onEdit={(resourceId, data) => handleEditResource(resourceId, data)}
+              onDelete={handleDeleteResource}
+            />
+          ))
         )}
       </div>
 
       {/* Add Resource Dialog */}
       {isOwner && (
-        <>
-          <AddResourceDialog
-            open={isAddResourceOpen}
-            onOpenChange={setIsAddResourceOpen}
-            onSubmit={handleAddResource}
-            mode="add"
-          />
-          
-          {/* Edit Resource Dialog */}
-          <AddResourceDialog
-            open={isEditResourceOpen}
-            onOpenChange={setIsEditResourceOpen}
-            onSubmit={handleEditResource}
-            mode="edit"
-            initialData={editingResource ? {
-              title: editingResource.title,
-              description: editingResource.description || '',
-              resourceType: editingResource.resourceType,
-              resourceUrl: editingResource.resourceUrl,
-              userNotes: editingResource.userNotes || '',
-            } : undefined}
-          />
-        </>
+        <AddResourceDialog
+          open={isAddResourceOpen}
+          onOpenChange={setIsAddResourceOpen}
+          onSubmit={handleAddResource}
+          mode="add"
+        />
       )}
     </main>
   )

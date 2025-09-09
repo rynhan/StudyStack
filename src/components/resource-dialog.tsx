@@ -1,12 +1,12 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Link, Upload, FileText } from "lucide-react"
+import { Link, Upload } from "lucide-react"
 
 type ResourceData = {
   title: string
@@ -77,6 +77,9 @@ export default function AddResourceDialog({
 
     onSubmit(form)
     
+    // Close dialog after successful submission
+    onOpenChange(false)
+    
     // Reset form
     setForm({
       title: "",
@@ -122,16 +125,21 @@ export default function AddResourceDialog({
     return 'document'
   }
 
+  const isEdit = mode === 'edit'
+  const title = isEdit ? 'Edit Resource' : 'Add New Resource'
+  const description = isEdit 
+    ? 'Update your resource information and notes.' 
+    : 'Add a new resource to your study stack by URL or file upload.'
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>
-            {mode === 'edit' ? 'Edit Resource' : 'Add Resource'}
-          </DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-6">
             {/* Resource Input Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -148,9 +156,10 @@ export default function AddResourceDialog({
 
               <TabsContent value="url" className="space-y-4 mt-4">
                 <div>
-                  <Label htmlFor="resourceUrl">Resource URL</Label>
+                  <Label htmlFor="resourceUrl"><p>Resource URL<b className="text-red-700">*</b></p></Label>
                   <Input
                     id="resourceUrl"
+                    className="mt-2 mb-1"
                     placeholder="https://example.com or YouTube URL"
                     value={form.resourceUrl || ""}
                     onChange={(e) => handleUrlChange(e.target.value)}
@@ -164,9 +173,10 @@ export default function AddResourceDialog({
 
               <TabsContent value="file" className="space-y-4 mt-4">
                 <div>
-                  <Label htmlFor="file">Upload File</Label>
+                  <Label htmlFor="file"><p>Upload File<b className="text-red-700">*</b></p></Label>
                   <Input
                     id="file"
+                    className="mt-2 mb-1"
                     type="file"
                     onChange={handleFileChange}
                     accept="image/*,.pdf,.doc,.docx,.txt,.ppt,.pptx"
@@ -180,8 +190,8 @@ export default function AddResourceDialog({
             </Tabs>
 
             {/* Title */}
-            <div>
-              <Label htmlFor="title">Title *</Label>
+            <div className="space-y-2">
+              <Label htmlFor="title"><p>Title<b className="text-red-700">*</b></p></Label>
               <Input
                 id="title"
                 placeholder="Enter resource title"
@@ -192,36 +202,29 @@ export default function AddResourceDialog({
             </div>
 
             {/* Description */}
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <textarea
                 id="description"
-                className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
                 placeholder="Brief description of the resource"
                 value={form.description}
                 onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+                rows={3}
               />
             </div>
 
             {/* Personal Notes */}
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="userNotes">Personal Notes</Label>
               <textarea
                 id="userNotes"
-                className="w-full min-h-[60px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
                 placeholder="Add your personal notes about this resource"
                 value={form.userNotes}
                 onChange={(e) => setForm(prev => ({ ...prev, userNotes: e.target.value }))}
+                rows={2}
               />
-            </div>
-
-            {/* Resource Type Preview */}
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <FileText className="h-4 w-4" />
-                <span>Type: </span>
-                <span className="font-medium capitalize">{form.resourceType}</span>
-              </div>
             </div>
           </div>
 
