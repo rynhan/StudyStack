@@ -1,0 +1,66 @@
+[
+  {
+    "_id": {
+      "$oid": "66d62f4b46b3f7514a60b943"
+    },
+    "title": "Introduction to Psychology",
+    "description": "A beginner's guide to the core concepts and history of psychology.",
+    "emoji": "🧠",
+    "isPublic": true,
+    "ownerId": "admin007",
+    "createdAt": {
+      "$date": "2024-09-10T10:00:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T10:00:00.000Z"
+    }
+  },
+  {
+    "_id": {
+      "$oid": "66d62f4b46b3f7514a60b944"
+    },
+    "title": "Fullstack Web Development",
+    "description": "Resources for building modern web applications with front-end and back-end technologies.",
+    "emoji": "💻",
+    "isPublic": true,
+    "ownerId": "admin007",
+    "createdAt": {
+      "$date": "2024-09-10T11:00:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T11:00:00.000Z"
+    }
+  },
+  {
+    "_id": {
+      "$oid": "66d62f4b46b3f7514a60b945"
+    },
+    "title": "Machine Learning Fundamentals",
+    "description": "An introduction to the foundational algorithms and concepts in machine learning.",
+    "emoji": "🤖",
+    "isPublic": true,
+    "ownerId": "admin007",
+    "createdAt": {
+      "$date": "2024-09-10T12:00:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T12:00:00.000Z"
+    }
+  },
+  {
+    "_id": {
+      "$oid": "66d62f4b46b3f7514a60b946"
+    },
+    "title": "Data Structures & Algorithms",
+    "description": "Essential resources for mastering data structures and algorithms for interviews and problem-solving.",
+    "emoji": "🧮",
+    "isPublic": true,
+    "ownerId": "admin007",
+    "createdAt": {
+      "$date": "2024-09-10T13:00:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T13:00:00.000Z"
+    }
+  }
+]

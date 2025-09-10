@@ -9,7 +9,7 @@ import StudyStackCard from "@/components/study-stack-card"
 import StudyStackDialog from "@/components/study-stack-dialog"
 import LandingPage from "@/components/landing-page"
 import { useRouter } from "next/navigation"
-import { useUser, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
+import { useUser, SignedIn, SignedOut } from '@clerk/nextjs'
 
 // Type based on the API v1 response and Mongoose schema
 interface Stack {
@@ -147,10 +147,6 @@ export default function Home() {
       
       <SignedIn>
         <main className="container mx-auto p-12">
-          {/* User Button in top right */}
-          <div className="flex justify-end mb-6">
-            <UserButton afterSignOutUrl="/" />
-          </div>
           
           {loading ? (
             <div className="flex justify-center items-center min-h-64">

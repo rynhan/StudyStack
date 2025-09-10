@@ -1,0 +1,210 @@
+[
+  {
+    "studyStackId": {
+      "$oid": "66d62f4b46b3f7514a60b943"
+    },
+    "title": "Crash Course Psychology #1",
+    "description": "An engaging video introduction to the field of psychology from the popular Crash Course series.",
+    "resourceType": "youtube",
+    "status": "done",
+    "resourceUrl": "https://www.youtube.com/watch?v=vo4pMVb0R6M",
+    "embedUrl": "https://www.youtube.com/embed/vo4pMVb0R6M",
+    "userNotes": "Watched this video to get a basic understanding of psychology's history.",
+    "createdAt": {
+      "$date": "2024-09-10T10:05:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T10:05:00.000Z"
+    }
+  },
+  {
+    "studyStackId": {
+      "$oid": "66d62f4b46b3f7514a60b943"
+    },
+    "title": "History of Psychology",
+    "description": "A detailed article on the major schools of thought and key figures in psychology's development.",
+    "resourceType": "webpage",
+    "status": "inprogress",
+    "resourceUrl": "https://www.verywellmind.com/a-brief-history-of-psychology-2795240",
+    "userNotes": "Need to finish reading this article and take notes on key terms.",
+    "createdAt": {
+      "$date": "2024-09-10T10:15:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T10:15:00.000Z"
+    }
+  },
+  {
+    "studyStackId": {
+      "$oid": "66d62f4b46b3f7514a60b943"
+    },
+    "title": "Cognitive Psychology: A Textbook",
+    "description": "Chapter 1 of a textbook on cognitive psychology, focusing on perception and memory.",
+    "resourceType": "document",
+    "status": "todo",
+    "resourceUrl": "https://www.example.com/cognitive-psychology-chapter-1.pdf",
+    "userNotes": "Plan to read this chapter next to dive deeper into the topic.",
+    "createdAt": {
+      "$date": "2024-09-10T10:20:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T10:20:00.000Z"
+    }
+  },
+  {
+    "studyStackId": {
+      "$oid": "66d62f4b46b3f7514a60b944"
+    },
+    "title": "ReactJS for Beginners",
+    "description": "An introduction to React, covering components, state, and props.",
+    "resourceType": "webpage",
+    "status": "done",
+    "resourceUrl": "https://react.dev/",
+    "userNotes": "Good starting point. The official docs are well-written.",
+    "createdAt": {
+      "$date": "2024-09-10T11:05:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T11:05:00.000Z"
+    }
+  },
+  {
+    "studyStackId": {
+      "$oid": "66d62f4b46b3f7514a60b944"
+    },
+    "title": "Node.js Crash Course",
+    "description": "A quick crash course on building a back-end API with Node.js and Express.",
+    "resourceType": "youtube",
+    "status": "inprogress",
+    "resourceUrl": "https://www.youtube.com/watch?v=fBNL5mfwwXo",
+    "embedUrl": "https://www.youtube.com/embed/fBNL5mfwwXo",
+    "userNotes": "Need to follow along and build a small project.",
+    "createdAt": {
+      "$date": "2024-09-10T11:15:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T11:15:00.000Z"
+    }
+  },
+  {
+    "studyStackId": {
+      "$oid": "66d62f4b46b3f7514a60b944"
+    },
+    "title": "MongoDB Basics",
+    "description": "A tutorial on how to get started with MongoDB and its basic operations.",
+    "resourceType": "webpage",
+    "status": "todo",
+    "resourceUrl": "https://www.mongodb.com/docs/manual/introduction/",
+    "userNotes": "Will be my next step after the Node.js crash course.",
+    "createdAt": {
+      "$date": "2024-09-10T11:25:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T11:25:00.000Z"
+    }
+  },
+  {
+    "studyStackId": {
+      "$oid": "66d62f4b46b3f7514a60b945"
+    },
+    "title": "Introduction to Machine Learning",
+    "description": "A comprehensive online course on Coursera by Andrew Ng.",
+    "resourceType": "webpage",
+    "status": "inprogress",
+    "resourceUrl": "https://www.coursera.org/learn/machine-learning",
+    "userNotes": "Starting with week 1 lectures and assignments.",
+    "createdAt": {
+      "$date": "2024-09-10T12:05:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T12:05:00.000Z"
+    }
+  },
+  {
+    "studyStackId": {
+      "$oid": "66d62f4b46b3f7514a60b945"
+    },
+    "title": "Machine Learning Explained",
+    "description": "A visual and intuitive explanation of how machine learning models work.",
+    "resourceType": "youtube",
+    "status": "todo",
+    "resourceUrl": "https://www.youtube.com/watch?v=aircAruvnKk",
+    "embedUrl": "https://www.youtube.com/embed/aircAruvnKk",
+    "userNotes": "Good for high-level understanding before diving deep.",
+    "createdAt": {
+      "$date": "2024-09-10T12:15:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T12:15:00.000Z"
+    }
+  },
+  {
+    "studyStackId": {
+      "$oid": "66d62f4b46b3f7514a60b946"
+    },
+    "title": "Data Structures Cheatsheet",
+    "description": "A quick reference guide for common data structures like arrays, linked lists, and trees.",
+    "resourceType": "webpage",
+    "status": "reference",
+    "resourceUrl": "https://www.cs.usfca.edu/~galles/visualization/Algorithms.html",
+    "userNotes": "This is a great site for visualizing algorithms.",
+    "createdAt": {
+      "$date": "2024-09-10T13:05:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T13:05:00.000Z"
+    }
+  },
+  {
+    "studyStackId": {
+      "$oid": "66d62f4b46b3f7514a60b946"
+    },
+    "title": "Big-O Notation Explained",
+    "description": "A video tutorial on understanding algorithmic complexity and Big-O notation.",
+    "resourceType": "youtube",
+    "status": "done",
+    "resourceUrl": "https://www.youtube.com/watch?v=v4cd1O4zkGw",
+    "embedUrl": "https://www.youtube.com/embed/v4cd1O4zkGw",
+    "userNotes": "Found the examples with code snippets very helpful.",
+    "createdAt": {
+      "$date": "2024-09-10T13:10:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T13:10:00.000Z"
+    }
+  },
+  {
+    "studyStackId": {
+      "$oid": "66d62f4b46b3f7514a60b946"
+    },
+    "title": "Sorting Algorithms Visualized",
+    "description": "A resource with animated visualizations of different sorting algorithms.",
+    "resourceType": "webpage",
+    "status": "todo",
+    "resourceUrl": "https://www.toptal.com/developers/sorting-algorithms",
+    "userNotes": "Planning to study quicksort and mergesort using this tool.",
+    "createdAt": {
+      "$date": "2024-09-10T13:20:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T13:20:00.000Z"
+    }
+  },
+  {
+    "studyStackId": {
+      "$oid": "66d62f4b46b3f7514a60b946"
+    },
+    "title": "Data Structures & Algorithms in Java",
+    "description": "A comprehensive document with code examples for implementing common data structures in Java.",
+    "resourceType": "document",
+    "status": "inprogress",
+    "resourceUrl": "https://www.example.com/dsa-in-java.pdf",
+    "userNotes": "Currently working on the linked list section.",
+    "createdAt": {
+      "$date": "2024-09-10T13:30:00.000Z"
+    },
+    "updatedAt": {
+      "$date": "2024-09-10T13:30:00.000Z"
+    }
+  }
+]

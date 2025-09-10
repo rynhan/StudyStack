@@ -152,3 +152,13 @@ npx vercel
 ```
 
 Make sure to set environment variables in your deployment platform.
+
+
+
+## 📁 Sample Test Data
+
+Here are two JSON files containing sample data for the stacks and resources collections. This data can be used for demonstration purposes. Please note, the _id and ownerId values are hardcoded for easy setup.
+
+- `src/app/db_seeds/stacks.json`
+- `src/app/db_seeds/resources.json`
+
