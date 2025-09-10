@@ -13,7 +13,7 @@ import ResourceCard from "@/components/resource-card"
 import ResourceCardLearn from "@/components/resource-card-learn"
 import LearningProgress from "@/components/reusable-learning-progress"
 import SearchBar from "@/components/reusable-search-bar"
-import { useUser } from '@clerk/nextjs'
+import { useUser, SignedIn, SignedOut } from '@clerk/nextjs'
 import CreateQuizDialog from "@/components/quiz-dialog"
 import QuizCard from "@/components/quiz-card"
 
@@ -482,7 +482,24 @@ export default function StackPage() {
 
 
   return (
-    <main className="container mx-auto p-6 max-w-4xl">
+    <>
+      <SignedOut>
+        <main className="container mx-auto p-6 max-w-4xl">
+          <div className="text-center mt-20">
+            <div className="text-8xl mb-8">🔐</div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Access Restricted</h1>
+            <p className="text-xl text-gray-600 mb-8">
+              Please sign in to view study stacks
+            </p>
+            <Button onClick={() => router.push('/')}> 
+              Go Back Home
+            </Button>
+          </div>
+        </main>
+      </SignedOut>
+      
+      <SignedIn>
+        <main className="container mx-auto p-6 max-w-4xl">
       {/* Back Button */}
       <div className="flex items-center mb-6">
         <Button 
@@ -846,5 +863,7 @@ export default function StackPage() {
         />
       )}
     </main>
+      </SignedIn>
+    </>
   )
 }

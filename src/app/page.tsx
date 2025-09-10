@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import StudyStackCard from "@/components/study-stack-card"
 import StudyStackDialog from "@/components/study-stack-dialog"
+import LandingPage from "@/components/landing-page"
 import { useRouter } from "next/navigation"
-import { useUser } from '@clerk/nextjs'
+import { useUser, SignedIn, SignedOut } from '@clerk/nextjs'
 
 // Type based on the API v1 response and Mongoose schema
 interface Stack {
@@ -139,66 +140,74 @@ export default function Home() {
   }
 
   return (
-    <main className="container mx-auto p-12">
-      {loading ? (
-        <div className="flex justify-center items-center min-h-64">
-          <p className="text-gray-500">Loading...</p>
-        </div>
-      ) : (
-        <Tabs defaultValue="private" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="private">My Stacks</TabsTrigger>
-            <TabsTrigger value="public">Community Stacks</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="public">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {/* Only show public stacks, no create button */}
-              {publicStacks.map(stack => (
-                <StudyStackCard 
-                  key={stack._id} 
-                  set={{ ...stack, id: stack._id }} 
-                  isOwner={stack.ownerId === currentUserId}
-                  onCopy={handleCopyStack}
-                  onClick={() => handleViewStack(stack._id)}
-                />
-              ))}
+    <>
+      <SignedOut>
+        <LandingPage />
+      </SignedOut>
+      
+      <SignedIn>
+        <main className="container mx-auto p-12">
+          {loading ? (
+            <div className="flex justify-center items-center min-h-64">
+              <p className="text-gray-500">Loading...</p>
             </div>
-          </TabsContent>
+          ) : (
+            <Tabs defaultValue="private" className="w-full">
+              <TabsList className="mb-6">
+                <TabsTrigger value="private">My Stacks</TabsTrigger>
+                <TabsTrigger value="public">Community Stacks</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="private">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {/* Create New Stack Card triggers dialog */}
-              <Card 
-                className="flex flex-col items-center justify-center h-60 cursor-pointer hover:shadow-lg transition"
-                onClick={() => setIsCreateDialogOpen(true)}
-              >
-                <Button size="icon" className="mb-2 rounded-full w-12 h-12 text-2xl">+</Button>
-                <span className="font-medium">Create New Stack</span>
-              </Card>
-              {/* Private stacks */}
-              {privateStacks.map(stack => (
-                <StudyStackCard 
-                  key={stack._id} 
-                  set={{ ...stack, id: stack._id }} 
-                  isOwner={stack.ownerId === currentUserId}
-                  onEdit={handleEditStack}
-                  onDelete={handleDeleteStack}
-                  onClick={() => handleViewStack(stack._id)}
-                />
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
-      )}
+              <TabsContent value="public">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {/* Only show public stacks, no create button */}
+                  {publicStacks.map(stack => (
+                    <StudyStackCard 
+                      key={stack._id} 
+                      set={{ ...stack, id: stack._id }} 
+                      isOwner={stack.ownerId === currentUserId}
+                      onCopy={handleCopyStack}
+                      onClick={() => handleViewStack(stack._id)}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
 
-      {/* Single Create Stack Dialog */}
-      <StudyStackDialog
-        mode="create"
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onSubmit={handleCreateStack}
-      />
-    </main>
+              <TabsContent value="private">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {/* Create New Stack Card triggers dialog */}
+                  <Card 
+                    className="flex flex-col items-center justify-center h-60 cursor-pointer hover:shadow-lg transition"
+                    onClick={() => setIsCreateDialogOpen(true)}
+                  >
+                    <Button size="icon" className="mb-2 rounded-full w-12 h-12 text-2xl">+</Button>
+                    <span className="font-medium">Create New Stack</span>
+                  </Card>
+                  {/* Private stacks */}
+                  {privateStacks.map(stack => (
+                    <StudyStackCard 
+                      key={stack._id} 
+                      set={{ ...stack, id: stack._id }} 
+                      isOwner={stack.ownerId === currentUserId}
+                      onEdit={handleEditStack}
+                      onDelete={handleDeleteStack}
+                      onClick={() => handleViewStack(stack._id)}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
+
+          {/* Single Create Stack Dialog */}
+          <StudyStackDialog
+            mode="create"
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+            onSubmit={handleCreateStack}
+          />
+        </main>
+      </SignedIn>
+    </>
   )
 }

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { ArrowLeft, Clock, CheckCircle, XCircle, Brain } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
+import { SignedIn, SignedOut } from '@clerk/nextjs'
 import axios from 'axios'
 
 interface QuizQuestion {
@@ -47,7 +48,7 @@ interface QuizResult {
   }>
 }
 
-export default function QuizPage() {
+function AuthenticatedQuizContent() {
   const router = useRouter()
   const params = useParams()
   
@@ -397,5 +398,32 @@ export default function QuizPage() {
         </Button>
       </div>
     </div>
+  )
+}
+
+export default function QuizPage() {
+  const router = useRouter()
+  
+  return (
+    <>
+      <SignedOut>
+        <div className="container mx-auto p-6 max-w-4xl">
+          <div className="text-center mt-20">
+            <div className="text-8xl mb-8">🔐</div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Access Restricted</h1>
+            <p className="text-xl text-gray-600 mb-8">
+              Please sign in to take quizzes
+            </p>
+            <Button onClick={() => router.push('/')}> 
+              Go Back Home
+            </Button>
+          </div>
+        </div>
+      </SignedOut>
+      
+      <SignedIn>
+        <AuthenticatedQuizContent />
+      </SignedIn>
+    </>
   )
 }
