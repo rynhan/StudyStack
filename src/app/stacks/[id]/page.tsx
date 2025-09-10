@@ -13,7 +13,7 @@ import ResourceCard from "@/components/resource-card"
 import ResourceCardLearn from "@/components/resource-card-learn"
 import LearningProgress from "@/components/reusable-learning-progress"
 import SearchBar from "@/components/reusable-search-bar"
-import { useUser, SignedIn, SignedOut } from '@clerk/nextjs'
+import { useUser, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
 import CreateQuizDialog from "@/components/quiz-dialog"
 import QuizCard from "@/components/quiz-card"
 
@@ -500,8 +500,8 @@ export default function StackPage() {
       
       <SignedIn>
         <main className="container mx-auto p-6 max-w-4xl">
-      {/* Back Button */}
-      <div className="flex items-center mb-6">
+      {/* Back Button and User Button */}
+      <div className="flex items-center justify-between mb-6">
         <Button 
           variant="ghost" 
           size="sm" 
@@ -511,6 +511,7 @@ export default function StackPage() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
+        <UserButton afterSignOutUrl="/" />
       </div>
 
       {/* Stack Header */}
