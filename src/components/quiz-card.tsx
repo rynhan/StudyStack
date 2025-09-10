@@ -1,11 +1,12 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Brain, Clock, BookOpen, MoreVertical, Trash2, AlertCircle } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface Quiz {
   _id: string
@@ -37,6 +38,8 @@ export default function QuizCard({
   onDelete,
   lastAttempt 
 }: QuizCardProps) {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -74,15 +77,19 @@ export default function QuizCard({
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (onDelete && window.confirm('Are you sure you want to delete this quiz?')) {
-      onDelete(quiz._id)
-    }
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleConfirmDelete = () => {
+    onDelete?.(quiz._id)
+    setIsDeleteDialogOpen(false)
   }
 
   const isClickable = quiz.status === 'ready'
 
   return (
-    <Card 
+    <>
+      <Card 
       className={`transition-all hover:shadow-md ${
         isClickable ? 'cursor-pointer hover:border-blue-300' : 'opacity-75'
       } ${quiz.status === 'generating' ? 'animate-pulse' : ''}`}
@@ -121,7 +128,7 @@ export default function QuizCard({
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-40" align="end">
+              <PopoverContent className="w-32 p-1" align="end">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -200,5 +207,26 @@ export default function QuizCard({
         </div>
       </CardContent>
     </Card>
+
+    {/* Delete Confirmation Dialog */}
+    <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Quiz</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete &ldquo;{quiz.title}&rdquo;? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={handleConfirmDelete}>
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

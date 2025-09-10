@@ -4,6 +4,8 @@ import QuizModel from '@/models/Quiz';
 import ResourceModel from '@/models/Resource';
 import StackModel from '@/models/Stack';
 import { auth } from '@clerk/nextjs/server';
+import { generateQuizWithAI } from '@/lib/ai-quiz-generator';
+
 
 // POST /api/v1/stacks/[stackId]/quizzes - Create a new quiz
 export async function POST(
@@ -57,7 +59,12 @@ export async function POST(
     const savedQuiz = await quiz.save();
 
     // Start background quiz generation
-    generateQuizQuestions(String(savedQuiz._id), resources, numberOfQuestions, useHOTS);
+    generateQuizQuestions(String(savedQuiz._id), resources, numberOfQuestions, useHOTS)
+      .catch(error => {
+        console.error('Background quiz generation failed:', error);
+        // Update quiz status to failed
+        QuizModel.findByIdAndUpdate(savedQuiz._id, { status: 'failed' }).catch(console.error);
+      });
 
     return NextResponse.json(savedQuiz, { status: 201 });
   } catch (error) {
@@ -102,7 +109,7 @@ export async function GET(
   }
 }
 
-// Background function to generate quiz questions
+// Background function to generate quiz questions using AI
 async function generateQuizQuestions(
   quizId: string,
   resources: Array<{ title: string; description?: string; resourceUrl: string; resourceType: string }>,
@@ -110,75 +117,19 @@ async function generateQuizQuestions(
   useHOTS: boolean
 ) {
   try {
-    // Simulate AI generation delay (replace with actual AI service)
-    await new Promise(resolve => setTimeout(resolve, 5000 + Math.random() * 10000));
+    console.log(`Starting AI quiz generation for quiz ${quizId} with ${numberOfQuestions} questions`);
 
-    // Here you would integrate with your AI service (OpenAI, Anthropic, etc.)
-    // Prepare resource context for AI (commented out for demo)
-    // const resourceContext = resources.map(r => ({
-    //   title: r.title,
-    //   description: r.description || '',
-    //   type: r.resourceType,
-    //   url: r.resourceUrl
-    // }));
-    // Example prompt for OpenAI:
-    /*
-    const prompt = `
-    Create ${numberOfQuestions} multiple choice questions based on the following study resources:
-    
-    ${resourceContext.map(r => `- ${r.title}: ${r.description} (${r.type})`).join('\n')}
-    
-    Requirements:
-    - Each question should have 4 options (A, B, C, D)
-    - Only one correct answer per question
-    - Include brief explanations for correct answers
-    - ${useHOTS ? 'Focus on analysis, synthesis, and evaluation (Higher Order Thinking Skills)' : 'Focus on comprehension and application'}
-    - Make questions relevant to the resource content
-    
-    Return as JSON array with structure:
-    {
-      "question": "Question text",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctAnswer": 0,
-      "explanation": "Why this is correct",
-      "difficulty": "${useHOTS ? 'hard' : 'medium'}"
-    }
-    `;
-    
-    // const aiResponse = await openai.chat.completions.create({
-    //   model: "gpt-4",
-    //   messages: [{ role: "user", content: prompt }],
-    //   temperature: 0.7
-    // });
-    */
+    // Import the AI utility function
 
-    // For demo purposes, create sample questions
-    const questions = [];
-    const questionTypes = [
-      'What is the main concept explained in',
-      'Which of the following best describes',
-      'According to the content in',
-      'What would be the most appropriate application of',
-      'How does the information in',
-      'What can be inferred from'
-    ];
+    // Generate quiz questions using AI
+    const questions = await generateQuizWithAI({
+      resources,
+      numberOfQuestions,
+      useHOTS: useHOTS || false
+    });
 
-    for (let i = 0; i < numberOfQuestions; i++) {
-      const resource = resources[i % resources.length];
-      const questionType = questionTypes[i % questionTypes.length];
-      
-      questions.push({
-        question: `${questionType} "${resource.title}"?`,
-        options: [
-          `Primary concept related to ${resource.title}`,
-          `Secondary aspect of ${resource.title}`,
-          `Alternative interpretation of ${resource.title}`,
-          `Unrelated concept to ${resource.title}`
-        ],
-        correctAnswer: 0, // First option is always correct in demo
-        explanation: `This question tests your understanding of the key concepts presented in ${resource.title}. The correct answer focuses on the primary learning objective of this resource.`,
-        difficulty: useHOTS ? 'hard' : 'medium'
-      });
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+      throw new Error('AI generation returned no questions');
     }
 
     // Update quiz with generated questions
@@ -188,7 +139,7 @@ async function generateQuizQuestions(
       generatedAt: new Date()
     });
 
-    console.log(`Successfully generated ${questions.length} questions for quiz ${quizId}`);
+    console.log(`Successfully generated ${questions.length} questions for quiz ${quizId} using AI`);
 
   } catch (error) {
     console.error('Error generating quiz questions:', error);
@@ -197,5 +148,8 @@ async function generateQuizQuestions(
     await QuizModel.findByIdAndUpdate(quizId, {
       status: 'failed'
     });
+
+    // Re-throw the error so the calling function can handle it
+    throw error;
   }
 }
