@@ -14,6 +14,8 @@ import ResourceCardLearn from "@/components/resource-card-learn"
 import LearningProgress from "@/components/reusable-learning-progress"
 import SearchBar from "@/components/reusable-search-bar"
 import { useUser } from '@clerk/nextjs'
+import CreateQuizDialog from "@/components/quiz-dialog"
+import QuizCard from "@/components/quiz-card"
 
 // Utility functions for resource type detection
 const detectResourceType = (url?: string): 'youtube' | 'webpage' | 'document' | 'image' => {
@@ -88,7 +90,23 @@ type ResourceData = {
   status?: 'reference' | 'todo' | 'inprogress' | 'done'
 }
 
+interface Quiz {
+  _id: string
+  title: string
+  description?: string
+  numberOfQuestions: number
+  useHOTS: boolean
+  status: 'generating' | 'ready' | 'failed'
+  resourceIds: Array<{ _id: string; title: string }>
+  generatedAt?: string
+  createdAt: string
+}
 
+interface QuizAttempt {
+  _id: string
+  score: number
+  completedAt: string
+}
 
 export default function StackPage() {
   const router = useRouter()
@@ -102,6 +120,11 @@ export default function StackPage() {
   const [sortBy, setSortBy] = useState<'created' | 'updated'>('created')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [statusFilter, setStatusFilter] = useState<'all' | 'reference' | 'todo' | 'inprogress' | 'done'>('all')
+  
+  // Quiz-related state
+  const [quizzes, setQuizzes] = useState<Quiz[]>([])
+  const [isCreateQuizOpen, setIsCreateQuizOpen] = useState(false)
+  const [quizAttempts, setQuizAttempts] = useState<Record<string, QuizAttempt>>({}) // quizId -> latest attempt
   
   const currentUserId = user?.id // Get from Clerk
   const stackId = Array.isArray(params.id) ? params.id[0] : params.id
@@ -136,6 +159,29 @@ export default function StackPage() {
         const resourcesResponse = await axios.get(`/api/v1/stacks/${stackId}/resources`)
         const resourcesData: Resource[] = resourcesResponse.data
         setResources(resourcesData)
+
+        // Load quizzes for this study stack
+        const quizzesResponse = await axios.get(`/api/v1/stacks/${stackId}/quizzes`)
+        const quizzesData: Quiz[] = quizzesResponse.data
+        setQuizzes(quizzesData)
+
+        // Load quiz attempts for ready quizzes
+        const readyQuizzes = quizzesData.filter(q => q.status === 'ready')
+        const attempts: Record<string, QuizAttempt> = {}
+        
+        for (const quiz of readyQuizzes) {
+          try {
+            const attemptsResponse = await axios.get(`/api/v1/stacks/${stackId}/quizzes/${quiz._id}/attempts`)
+            const userAttempts = attemptsResponse.data
+            if (userAttempts.length > 0) {
+              attempts[quiz._id] = userAttempts[0] // Get latest attempt
+            }
+          } catch {
+            // User might not have attempts for this quiz
+            console.log('No attempts found for quiz:', quiz._id)
+          }
+        }
+        setQuizAttempts(attempts)
       } catch (error) {
         console.error('Failed to load study stack:', error)
       } finally {
@@ -145,6 +191,30 @@ export default function StackPage() {
 
     loadData()
   }, [stackId])
+
+  // Poll for quiz status updates
+  useEffect(() => {
+    const generatingQuizzes = quizzes.filter(q => q.status === 'generating')
+    if (generatingQuizzes.length === 0) return
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const quizzesResponse = await axios.get(`/api/v1/stacks/${stackId}/quizzes`)
+        const updatedQuizzes: Quiz[] = quizzesResponse.data
+        setQuizzes(updatedQuizzes)
+
+        // Check if any quiz finished generating
+        const stillGenerating = updatedQuizzes.filter(q => q.status === 'generating')
+        if (stillGenerating.length === 0) {
+          clearInterval(pollInterval)
+        }
+      } catch (error) {
+        console.error('Failed to poll quiz status:', error)
+      }
+    }, 2000) // Poll every 2 seconds
+
+    return () => clearInterval(pollInterval)
+  }, [quizzes, stackId])
 
   // Filter and sort resources based on search query and sort preferences (Resources Tab)
   const filteredAndSortedResources = React.useMemo(() => {
@@ -251,15 +321,15 @@ export default function StackPage() {
         }
       }
 
-  await axios.post(`/api/v1/stacks/${stackId}/resources`, {
-      title: data.title,
-      description: data.description,
-    resourceType,
-    resourceUrl: data.resourceUrl || '',
-    embedUrl,
-    userNotes: data.userNotes,
-  status: data.status || 'reference',
-  })
+      await axios.post(`/api/v1/stacks/${stackId}/resources`, {
+        title: data.title,
+        description: data.description,
+        resourceType,
+        resourceUrl: data.resourceUrl || '',
+        embedUrl,
+        userNotes: data.userNotes,
+        status: data.status || 'reference',
+      })
 
       // Refresh resources
       const resourcesResponse = await axios.get(`/api/v1/stacks/${stackId}/resources`)
@@ -355,6 +425,57 @@ export default function StackPage() {
     } else if (resource.resourceType === 'document' || resource.resourceType === 'image') {
       // Handle file download or preview
       window.open(resource.resourceUrl, '_blank')
+    }
+  }
+
+  const handleCreateQuiz = async (data: {
+    title: string
+    description: string
+    resourceIds: string[]
+    numberOfQuestions: number
+    useHOTS: boolean
+  }) => {
+    if (!stackId) return
+    
+    try {
+      await axios.post(`/api/v1/stacks/${stackId}/quizzes`, data)
+      
+      // Refresh quizzes
+      const quizzesResponse = await axios.get(`/api/v1/stacks/${stackId}/quizzes`)
+      const quizzesData: Quiz[] = quizzesResponse.data
+      setQuizzes(quizzesData)
+      
+      setIsCreateQuizOpen(false)
+    } catch (error) {
+      console.error('Failed to create quiz:', error)
+    }
+  }
+
+  const handleDeleteQuiz = async (quizId: string) => {
+    if (!stackId) return
+    
+    try {
+      await axios.delete(`/api/v1/stacks/${stackId}/quizzes/${quizId}`)
+      
+      // Refresh quizzes
+      const quizzesResponse = await axios.get(`/api/v1/stacks/${stackId}/quizzes`)
+      const quizzesData: Quiz[] = quizzesResponse.data
+      setQuizzes(quizzesData)
+      
+      // Remove attempts for deleted quiz
+      setQuizAttempts(prev => {
+        const updated = { ...prev }
+        delete updated[quizId]
+        return updated
+      })
+    } catch (error) {
+      console.error('Failed to delete quiz:', error)
+    }
+  }
+
+  const handleQuizClick = (quiz: Quiz) => {
+    if (quiz.status === 'ready') {
+      router.push(`/stacks/${stackId}/quiz/${quiz._id}`)
     }
   }
 
@@ -632,15 +753,76 @@ export default function StackPage() {
 
         {/* Assessment Tab */}
         <TabsContent value="assessment" className="mt-6">
-          <Card className="p-8 text-center">
-            <div className="text-gray-500 mb-4">
-              <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">AI Assessment Coming Soon</h3>
-              <p className="text-sm">
-                We&apos;re working on AI-powered quizzes and assessments to help you test your knowledge.
-              </p>
+          <div className="space-y-6">
+            {/* Create Quiz Button */}
+            {isOwner && resources.length > 0 && (
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold">AI-Generated Quizzes</h3>
+                  <p className="text-sm text-gray-600">
+                    Create quizzes based on your study resources using AI
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => setIsCreateQuizOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Quiz
+                </Button>
+              </div>
+            )}
+
+            {/* Quizzes List */}
+            <div className="space-y-4">
+              {quizzes.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <div className="text-gray-500 mb-4">
+                    <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">No quizzes yet</h3>
+                    <p className="text-sm">
+                      {isOwner 
+                        ? resources.length === 0 
+                          ? "Add some resources first, then create your first AI-generated quiz."
+                          : "Create your first AI-generated quiz to test your knowledge."
+                        : "This study stack doesn't have any quizzes yet."
+                      }
+                    </p>
+                  </div>
+                  {isOwner && resources.length > 0 && (
+                    <Button 
+                      onClick={() => setIsCreateQuizOpen(true)}
+                      className="mt-4"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create First Quiz
+                    </Button>
+                  )}
+                </Card>
+              ) : (
+                <>
+                  <div className="text-sm text-gray-600 mb-4">
+                    <span className="font-medium">{quizzes.length}</span>
+                    {' '}quiz{quizzes.length !== 1 ? 'es' : ''}
+                    {!isOwner && (
+                      <span className="text-gray-400 ml-2">• Public Stack</span>
+                    )}
+                  </div>
+                  
+                  {quizzes.map((quiz) => (
+                    <QuizCard
+                      key={quiz._id}
+                      quiz={quiz}
+                      isOwner={isOwner}
+                      onClick={() => handleQuizClick(quiz)}
+                      onDelete={handleDeleteQuiz}
+                      lastAttempt={quizAttempts[quiz._id]}
+                    />
+                  ))}
+                </>
+              )}
             </div>
-          </Card>
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -651,6 +833,16 @@ export default function StackPage() {
           onOpenChange={setIsAddResourceOpen}
           onSubmit={handleAddResource}
           mode="add"
+        />
+      )}
+
+      {/* Create Quiz Dialog */}
+      {isOwner && (
+        <CreateQuizDialog
+          open={isCreateQuizOpen}
+          onOpenChange={setIsCreateQuizOpen}
+          resources={resources}
+          onSubmit={handleCreateQuiz}
         />
       )}
     </main>

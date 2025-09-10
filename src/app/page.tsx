@@ -31,7 +31,7 @@ export default function Home() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const { user } = useUser() // Get current user from Clerk
   
-  const currentUserId = user?.id // In a real app, this would come from Clerk's useUser hook
+  const currentUserId = user?.id
 
   useEffect(() => { // Load data on component mount
     const loadData = async () => {
